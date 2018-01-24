@@ -1,5 +1,7 @@
 # purescript-quill
 
+[![Build status](https://travis-ci.org/jmackie4/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie4/purescript-quill)
+
 (WIP) PureScript bindings for [quilljs](https://quilljs.com/).
 
 ## Installation
@@ -14,7 +16,7 @@ Build it with:
 
 ```bash
 $ bower install
-$ npm run build:example
+$ npm run example
 ```
 
 Then open `example/dist/index.html` in your browser.
