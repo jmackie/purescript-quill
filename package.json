@@ -1,0 +1,7 @@
+{
+    "private": true,
+    "scripts": {
+        "clean": "rm -rf output && rm -rf .pulp-cache",
+        "build:example": "pulp build -I example/src --to example/dist/app.js"
+    }
+}
