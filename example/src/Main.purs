@@ -17,8 +17,8 @@ import DOM.Node.ParentNode (querySelector, QuerySelector(..))
 import DOM.Node.Types (Element)
 import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
 
-import Quill as Quill
-import Quill.Config as QCfg
+import Quill as Q
+import Quill.Config as QC
 import Quill.Types (QUILL)
 
 main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
@@ -31,10 +31,15 @@ main = do
 
     case target of
         Just el -> do
-            let cfg = QCfg.Config { debug: QCfg.DebugInfo
-                                  , theme: QCfg.SnowTheme
-                                  }
-            editor <- Quill.editor cfg el
+            let cfg = QC.defaultConfig { debug = QC.DebugInfo
+                                       , theme = QC.SnowTheme
+                                       , formats =
+                                            [ QC.Bold
+                                            , QC.Italic
+                                            ]
+                                       , placeholder = "Write here!"
+                                       }
+            editor <- Q.editor cfg el
             pure unit
         Nothing -> do
             log "editor not found!"
