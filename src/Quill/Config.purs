@@ -10,7 +10,7 @@ module Quill.Config
 import Prelude
 
 import Data.Foreign (Foreign, toForeign)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 
 import DOM.HTML.Types (HTMLElement)
 
@@ -53,20 +53,20 @@ import DOM.HTML.Types (HTMLElement)
 -- | invalid or falsy value will load a default minimal theme. Note the
 -- | theme’s specific stylesheet still needs to be included manually. See
 -- | Themes for more information.
-data Config = Config
-    { bounds  :: Maybe HTMLElement
-    , debug   :: DebugLevel
-    , formats :: Array Format
+type Config =
+    { bounds      :: Maybe HTMLElement
+    , debug       :: DebugLevel
+    , formats     :: Array Format
     -- , modules :: not currently implemented
     , placeholder :: String
-    , readonly :: Boolean
-    , strict :: Boolean
-    , theme   :: Theme
+    , readonly    :: Boolean
+    , strict      :: Boolean
+    , theme       :: Theme
     }
 
 -- | A `Config` instance with reasonable defaults
 defaultConfig :: Config
-defaultConfig = Config
+defaultConfig =
     { bounds: Nothing
     , debug: DebugOff
     , formats: []
@@ -77,15 +77,17 @@ defaultConfig = Config
     }
 
 configToForeign :: Config -> Foreign
-configToForeign (Config cfg) = toForeign $ cfg
-    { bounds      = toForeign cfg.bounds -- TODO
+configToForeign cfg = toForeign $ cfg
+    { bounds      = maybe null toForeign cfg.bounds -- TODO
     , debug       = debugLevelToForeign cfg.debug
-    , formats     = toForeign cfg.formats
+    , formats     = toForeign $ formatToForeign <$> cfg.formats
     , placeholder = toForeign cfg.placeholder
     , readonly    = toForeign cfg.readonly
     , strict      = toForeign cfg.strict
     , theme       = themeToForeign cfg.theme
     }
+
+foreign import null :: Foreign
 
 -- | https://quilljs.com/docs/api/#debug
 data DebugLevel
