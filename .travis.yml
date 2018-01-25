@@ -10,3 +10,7 @@ script:
     - npm run -s build
     - npm run -s clean
     - npm run -s example
+notifications:
+    email:
+        on_success: never
+        on_failure: always
