@@ -1,6 +1,6 @@
 'use strict';
 
-exports.quill = Quill; // raise an error if Quill isn't defined!
+exports.quill = Quill; // fail early if quilljs isn't available.
 
 exports.editorImpl = function(self, el, config) {
     return function() {

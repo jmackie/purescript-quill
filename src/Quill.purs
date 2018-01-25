@@ -1,9 +1,6 @@
 module Quill
-    ( Editor
-    , editor
+    ( editor
     ) where
-
-import Prelude
 
 import Control.Monad.Eff (Eff)
 
@@ -13,14 +10,12 @@ import Data.Foreign (Foreign)
 import DOM.HTML.Types (HTMLElement)
 
 import Quill.Config (Config, configToForeign)
-import Quill.Types (QUILL, Quill)
-
-data Editor = Editor
-
-foreign import quill :: Quill
+import Quill.Types (QUILL, Quill, Editor)
 
 editor :: forall eff. Config -> HTMLElement -> Eff (quill :: QUILL | eff) Editor
 editor cfg el = runFn3 editorImpl quill el (configToForeign cfg)
+
+foreign import quill :: Quill
 
 foreign import editorImpl
     :: forall eff
