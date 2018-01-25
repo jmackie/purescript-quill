@@ -3,7 +3,7 @@
     "scripts": {
         "clean": "rimraf output && rimraf .pulp-cache",
         "build": "pulp build -- --censor-lib --strict",
-        "example": "pulp browserify -O -I example/src --to example/dist/app.js"
+        "example": "pulp build -O -I example/src --to example/dist/app.js"
     },
     "dependencies": {
         "pulp": "^12.0.1",
