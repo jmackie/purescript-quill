@@ -14,45 +14,7 @@ import Data.Maybe (Maybe(..), maybe)
 
 import DOM.HTML.Types (HTMLElement)
 
--- | Initial Quill editor configuration options.
--- |
--- | ### `bounds`
--- |
--- | DOM Element or a CSS selector for a DOM Element, within which the editor’s
--- | ui elements (i.e. tooltips, etc.) should be confined. Currently,
--- | it only considers left and right boundaries.
--- |
--- | ### `debug`
--- |
--- | Level for logging messages.
--- |
--- | ### `formats`
--- |
--- | Whitelist of formats to allow in the editor.
--- |
--- | ### `placeholder`
--- |
--- | Placeholder text to show when editor is empty.
--- |
--- | ### `readonly`
--- |
--- | Whether to instantiate the editor to read-only mode.
--- |
--- | ### `strict`
--- |
--- | Some improvements and modifications, under a strict interpretation of
--- | semver, would warrant a major version bump. To prevent small changes
--- | from inflating Quill’s version number, they are disabled by this
--- | strict flag. Specific changes can be found in the Changelog and
--- | searching for “strict”. Setting this to false opts into potential
--- | future improvements.
--- |
--- | ### `theme`
--- |
--- | Name of theme to use. The builtin options are "bubble" or "snow". An
--- | invalid or falsy value will load a default minimal theme. Note the
--- | theme’s specific stylesheet still needs to be included manually. See
--- | Themes for more information.
+-- | https://quilljs.com/docs/configuration/
 type Config =
     { bounds      :: Maybe HTMLElement
     , debug       :: DebugLevel
@@ -76,6 +38,7 @@ defaultConfig =
     , theme: CustomTheme ""
     }
 
+-- | Convert `Config` to it's javascript representation.
 configToForeign :: Config -> Foreign
 configToForeign cfg = toForeign $ cfg
     { bounds      = maybe null toForeign cfg.bounds -- TODO
