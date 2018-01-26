@@ -6,7 +6,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 
-import Data.Either (either)
+import Data.Either (Either(..), either)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..))
 
@@ -20,6 +20,7 @@ import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
 import Quill as Q
 import Quill.Config as QC
 import Quill.Types (QUILL)
+import Quill.API.Content as API
 
 main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
 main = do
@@ -31,15 +32,25 @@ main = do
 
     case target of
         Just el -> do
-            let cfg = QC.defaultConfig { debug = QC.DebugInfo
-                                       , theme = QC.SnowTheme
-                                       , formats =
-                                            [ QC.Bold
-                                            , QC.Italic
-                                            ]
-                                       , placeholder = "Write here!"
-                                       }
+            let cfg = QC.defaultConfig
+                        { debug = QC.DebugWarn
+                        , theme = QC.SnowTheme
+                        , formats =
+                             [ QC.Header
+                             , QC.Bold
+                             , QC.Italic
+                             , QC.Underline
+                             , QC.Link
+                             , QC.List
+                             ]
+                        , placeholder = "Write here!"
+                        }
             editor <- Q.editor cfg el
+
+            API.getLength editor >>= (case _ of
+                 Left _    -> log   "getLength failed!"
+                 Right len -> log $ "editor length is: " <> show len)
+
             pure unit
         Nothing -> do
             log "editor not found!"

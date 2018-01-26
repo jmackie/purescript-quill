@@ -5,43 +5,67 @@ module Quill.API.Delta
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Control.Monad.Error.Class (throwError)
 
-import Data.Foreign (F, Foreign, ForeignError(..), readString)
+import Data.Either (Either(..))
+import Data.Foreign (F, Foreign, ForeignError(..),
+                     readString, readInt)
 import Data.Foreign.Index ((!))
 import Data.Foreign.Keys (keys)
 import Data.List.NonEmpty (singleton)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 
+import Quill.API.Embed (Embed(..))
 import Quill.API.FormatSpec (FormatSpec, readFormatSpec)
 
 -- | https://quilljs.com/docs/delta/
 data Delta
-    = InsertString String (Array FormatSpec)
-    | DeleteString String (Array FormatSpec)
-    | RetainString String (Array FormatSpec)
-    -- TODO: embeds
+    = Insert (Either Embed String) (Array FormatSpec)
+    | Delete Int
+    | Retain Int (Array FormatSpec)
 
 -- | Attempt to read in a Delta from a `Foreign` value.
 readDelta :: Foreign -> F Delta
-readDelta value = do
-    keys' <- keys value
+readDelta f = do
+    keys' <- keys f
     case keys' of
         [ "insert" ] -> do
-            str <- value ! "insert" >>= readString
-            pure $ InsertString str []
+            value <- f ! "insert" >>= \v ->
+                        (readString v <#> Right)
+                    <|> (v ! "image" >>= readString <#> Left <<< Image)
+                    <|> (v ! "Video" >>= readString <#> Left <<< Video)
+            pure $ Insert value []
 
         [ "insert", "attributes" ] -> do
-            str   <- value ! "insert" >>= readString
-            attrs <- value ! "attributes"
+            value <- f ! "insert" >>= \v ->
+                        (readString v <#> Right)
+                    <|> (v ! "image" >>= readString <#> Left <<< Image)
+                    <|> (v ! "Video" >>= readString <#> Left <<< Video)
+
+            attrs <- f ! "attributes"
             fmts  <- keys attrs >>= traverse \(k :: String) -> do
                         readFormatSpec =<< (attrs ! k <#> Tuple k)
-            pure $ InsertString str fmts
 
-        -- TODO: finish this!
+            pure $ Insert value fmts
 
-        _ -> do
+        [ "delete" ] -> do
+            f ! "delete" >>= readInt <#> Delete
+
+        [ "retain" ] -> do
+            f ! "retain" >>= readInt <#> flip Retain []
+
+        [ "retain", "attributes" ] -> do
+            value <- f ! "retain" >>= readInt
+
+            attrs <- f ! "attributes"
+            fmts  <- keys attrs >>= traverse \(k :: String) -> do
+                        readFormatSpec =<< (attrs ! k <#> Tuple k)
+
+            pure $ Retain value fmts
+
+        _ ->
             throwError $ (singleton
                  (ForeignError $ "unrecognised Delta properties: " <> show keys'))
 

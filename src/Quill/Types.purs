@@ -1,9 +1,12 @@
 module Quill.Types
     ( QUILL
     , Quill
-    )where
+    , null
+    ) where
 
 import Control.Monad.Eff (kind Effect)
+
+import Data.Foreign (Foreign)
 
 -- | The `Quill` effect type.
 foreign import data QUILL :: Effect
@@ -13,3 +16,5 @@ foreign import data QUILL :: Effect
 -- | will be thrown on initialisation.
 data Quill
 
+-- | Javascript null.
+foreign import null :: Foreign

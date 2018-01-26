@@ -3,7 +3,6 @@ module Quill.API.FormatSpec
     , readFormatSpec
     , Alignment(..)
     , FontName
-    , URL
     ) where
 
 import Prelude
@@ -30,19 +29,16 @@ data FormatSpec
     | Link String
     | Size Number
     | Strikethrough Boolean
-    -- TODO | Superscript
-    -- TODO | Subscript
+    -- TODO: | Superscript
+    -- TODO: | Subscript
     | Underline Boolean
     | Blockquote Boolean
     | Header Int
     | Indent Int
-    -- TODO | List
+    -- TODO: | List
     | TextAlignment Alignment
-    -- TODO | TextDirection
+    -- TODO: | TextDirection
     | CodeBlock Boolean
-    -- TODO | Formula
-    | Image URL
-    | Video URL
 
 -- | Options for text alignment.
 data Alignment
@@ -53,9 +49,6 @@ data Alignment
 
 -- | E.g. "sans-serif"
 type FontName = String
-
--- | E.g. "https://pursuit.purescript.org/"
-type URL = String
 
 -- | Attempt to read in a `FormatSpec` from an object key and associated value.
 readFormatSpec :: Tuple String Foreign -> F FormatSpec
@@ -88,8 +81,6 @@ readFormatSpec (Tuple key value) =
         "indent"     -> readInt value       <#> Indent
         "align"      -> readAlignment value <#> TextAlignment
         "code-block" -> readBoolean value   <#> CodeBlock
-        "image"      -> readString value    <#> Image
-        "video"      -> readString value    <#> Video
 
         -- Failure case
         prop -> do

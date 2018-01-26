@@ -14,6 +14,8 @@ import Data.Maybe (Maybe(..), maybe)
 
 import DOM.HTML.Types (HTMLElement)
 
+import Quill.Types (null)
+
 -- | https://quilljs.com/docs/configuration/
 type Config =
     { bounds      :: Maybe HTMLElement
@@ -49,8 +51,6 @@ configToForeign cfg = toForeign $ cfg
     , strict      = toForeign cfg.strict
     , theme       = themeToForeign cfg.theme
     }
-
-foreign import null :: Foreign
 
 -- | https://quilljs.com/docs/api/#debug
 data DebugLevel
