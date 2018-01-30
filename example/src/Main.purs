@@ -2,6 +2,8 @@ module Main where
 
 import Prelude
 
+import Color as Color
+
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
@@ -10,6 +12,7 @@ import Data.Array as A
 import Data.Either (Either(..), either)
 import Data.Foreign (MultipleErrors, toForeign, renderForeignError)
 import Data.Maybe (Maybe(..))
+import Data.Monoid (mempty)
 import Data.Options ((:=))
 import Data.String as S
 
@@ -22,9 +25,9 @@ import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
 
 import Quill as Q
 import Quill.API as API
-import Quill.API.Formats as Formats
-import Quill.API.Source as Source
-import Quill.Config as QC
+import Quill.API.Delta (Delta(..))
+import Quill.API.Formats as QFmt
+import Quill.Config as QCfg
 import Quill.Types (QUILL)
 
 main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
@@ -37,26 +40,42 @@ main = do
 
     case target of
         Just el -> do
-            let cfg = QC.debug       := QC.DebugWarn
-                   <> QC.theme       := QC.SnowTheme
-                   <> QC.placeholder := "Write here!"
-                   <> QC.formats := [ QC.allow Formats.bold
-                                    , QC.allow Formats.italic
-                                    , QC.allow Formats.underline
-                                    , QC.allow Formats.header
-                                    ]
+            let cfg = QCfg.debug       := QCfg.DebugWarn
+                   <> QCfg.theme       := QCfg.SnowTheme
+                   <> QCfg.placeholder := "Write here!"
+                   <> QCfg.formats     := [ QCfg.allow QFmt.bold
+                                          , QCfg.allow QFmt.italic
+                                          , QCfg.allow QFmt.underline
+                                          , QCfg.allow QFmt.header
+                                          , QCfg.allow QFmt.align
+                                          , QCfg.allow QFmt.color
+                                          ]
             editor <- Q.editor cfg el
 
-            API.getLength editor
-                >>= \end -> API.insertText
-                    (either (const 0) id end)
-                    "I'm bold"
-                    (Formats.bold := true)
-                    Source.API
+            _ <- API.setContents
+                    [ Insert (Right "purescript-quill example\n") $
+                        QFmt.header := 1 <>
+                        QFmt.align  := QFmt.Center <>
+                        QFmt.color  := Color.fromInt 0xff0000
+                    , Insert (Right "Hello World!") $
+                        QFmt.italic := true
+                    , Insert (Right "\n") mempty
+                    ]
+                    Nothing
                     editor
-                >>= (case _ of
-                    Left why  -> log $ "insertText failed: " <> renderMultipleErrors why
-                    Right ops -> log $ "insertText deltas: " <> (show $ A.length ops))
+
+            _ <- API.updateContents
+                    [ Retain (S.length "purescript-quill example\n") $
+                        mempty
+                    , Retain (S.length "Hello World") $
+                        QFmt.italic := true
+                    , Insert (Right " ") mempty
+                    , Delete 1
+                    , Insert (Right "?!") mempty
+                    , Insert (Right "\n") mempty
+                    ]
+                    Nothing
+                    editor
 
             pure unit
         Nothing -> do

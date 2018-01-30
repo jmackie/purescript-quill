@@ -78,7 +78,7 @@ align = optWith show "align"
 codeBlock :: Option Formats Boolean
 codeBlock = opt "code-block"
 
--- | Specify text alignment.
+-- | Text alignment.
 data Alignment
     = Left
     | Center
@@ -86,21 +86,24 @@ data Alignment
     | Justify
 
 instance showAlignment :: Show Alignment where
-    show Left    = "left"
-    show Center  = "center"
-    show Right   = "right"
-    show Justify = "justify"
+    show Left   = "left"
+    show Center = "center"
+    show Right  = "right"
+    show _      = "justify" -- HACK: see `optWith` comment below
 
 instance readAlignment :: Read Alignment where
     read "left"    = Just Left
     read "center"  = Just Center
     read "right"   = Just Right
     read "justify" = Just Justify
-    read _ = Nothing
+    read _         = Nothing
 
 -- | E.g. "sans-serif"
 type FontName = String
 
+-- NOTE: uses of `optWith` here need to handle the case that the function
+-- recieves an unsafely coerced unit value, as part of initial configuration.
+-- For whatever reason, `Color.toHexString` seems robust to this.
 optWith :: forall opt a b . (a -> b) -> String -> Option opt a
 optWith f = Op <<< \k v -> Options [Tuple k (toForeign $ f v)]
 

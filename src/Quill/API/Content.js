@@ -54,4 +54,4 @@ exports.updateContentsImpl = function(self, delta, source) {
     };
 };
 
-exports.null = null;
+exports.undefined = undefined;

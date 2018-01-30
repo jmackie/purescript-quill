@@ -1,8 +1,10 @@
 module Quill.API.Delta
     ( Ops
     , readOps
+    , opsToForeign
     , Delta(..)
     , readDelta
+    , deltaToForeign
     ) where
 
 import Prelude
@@ -12,11 +14,12 @@ import Control.Monad.Error.Class (throwError)
 
 import Data.Array as A
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..), readString, readInt, readArray)
+import Data.Foreign (F, Foreign, ForeignError(..), toForeign, readString, readInt, readArray)
 import Data.Foreign.Index ((!))
 import Data.Foreign.Keys (keys)
 import Data.List.NonEmpty (singleton)
 import Data.Options (Options(..))
+import Data.StrMap as StrMap
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 
@@ -27,6 +30,10 @@ type Ops = Array Delta
 
 readOps :: Foreign -> F Ops
 readOps = (_ ! "ops") >=> readArray >=> traverse readDelta
+
+opsToForeign :: Ops -> Foreign
+opsToForeign ops = toForeign $
+    StrMap.singleton "ops" (toForeign $ map deltaToForeign ops)
 
 -- | https://quilljs.com/docs/delta/
 data Delta
@@ -77,3 +84,29 @@ readDelta f = do
             throwError $ (singleton
                  (ForeignError $ "unrecognised Delta properties: " <> show keys'))
 
+deltaToForeign :: Delta -> Foreign
+deltaToForeign delta = toForeign $
+    case delta of
+        Insert (Right str) (Options fmts) ->
+            StrMap.fromFoldable
+                [ Tuple "insert" (toForeign str)
+                , Tuple "attributes"
+                    (toForeign $ StrMap.fromFoldable fmts)
+                ]
+        Insert (Left embed) (Options fmts) ->
+            let embedObject (Image url) = StrMap.singleton "image" url
+                embedObject (Video url) = StrMap.singleton "video" url
+            in  StrMap.fromFoldable
+                    [ Tuple "insert" (toForeign $ embedObject embed)
+                    , Tuple "attributes"
+                        (toForeign $ StrMap.fromFoldable fmts)
+                    ]
+        Delete n ->
+            StrMap.singleton "delete" $ toForeign n
+
+        Retain n (Options fmts) ->
+            StrMap.fromFoldable $
+                [ Tuple "retain" (toForeign n)
+                , Tuple "attributes"
+                    (toForeign $ StrMap.fromFoldable fmts)
+                ]
