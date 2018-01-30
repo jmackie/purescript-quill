@@ -16,17 +16,17 @@ import Data.Function.Uncurried (Fn1, runFn1, Fn3, runFn3, Fn4, runFn4)
 import Data.Maybe (Maybe, maybe)
 
 import Quill (Editor)
-import Quill.API.Delta (Delta, readDelta)
+import Quill.API.Delta (Deltas, readDeltas)
 import Quill.API.Return (Return)
 import Quill.API.Source (Source, sourceToForeign)
 import Quill.Types (QUILL, null)
 
 -- | https://quilljs.com/docs/api/#deletetext
--- | NOTE: I think this might actually return an array of Deltas...
+-- | NOTE: I think this might actually return an array of Deltass...
 deleteText
     :: forall eff
-     . Number -> Number -> Source -> Editor -> Eff (quill :: QUILL | eff) (Return Delta)
-deleteText index length source editor = runExcept <<< readDelta <$> runFn4 deleteTextImpl
+     . Number -> Number -> Source -> Editor -> Eff (quill :: QUILL | eff) (Return Deltas)
+deleteText index length source editor = runExcept <<< readDeltas <$> runFn4 deleteTextImpl
     editor index length (sourceToForeign source)
 
 foreign import deleteTextImpl
@@ -36,8 +36,8 @@ foreign import deleteTextImpl
 -- | https://quilljs.com/docs/api/#getcontents
 getContents
     :: forall eff
-     . Number -> (Maybe Number) -> Editor -> Eff (quill :: QUILL | eff) (Return Delta)
-getContents index length editor = runExcept <<< readDelta <$> runFn3 getContentsImpl
+     . Number -> (Maybe Number) -> Editor -> Eff (quill :: QUILL | eff) (Return Deltas)
+getContents index length editor = runExcept <<< readDeltas <$> runFn3 getContentsImpl
     editor index (maybe null toForeign length)
 
 foreign import getContentsImpl

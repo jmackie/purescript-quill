@@ -1,5 +1,7 @@
 module Quill.API.Delta
-    ( Delta(..)
+    ( Deltas
+    , readDeltas
+    , Delta(..)
     , readDelta
     ) where
 
@@ -10,7 +12,7 @@ import Control.Monad.Error.Class (throwError)
 
 import Data.Either (Either(..))
 import Data.Foreign (F, Foreign, ForeignError(..),
-                     readString, readInt)
+                     readString, readInt, readArray)
 import Data.Foreign.Index ((!))
 import Data.Foreign.Keys (keys)
 import Data.List.NonEmpty (singleton)
@@ -19,6 +21,11 @@ import Data.Tuple (Tuple(..))
 
 import Quill.API.Embed (Embed(..))
 import Quill.API.FormatSpec (FormatSpec, readFormatSpec)
+
+type Deltas = Array Delta
+
+readDeltas :: Foreign -> F Deltas
+readDeltas = readArray >=> traverse readDelta
 
 -- | https://quilljs.com/docs/delta/
 data Delta
