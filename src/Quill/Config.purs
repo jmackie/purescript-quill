@@ -1,74 +1,76 @@
 module Quill.Config
-    ( Config(..)
-    , defaultConfig
-    , configToForeign
-    , DebugLevel(..)
+    ( Config
     , Theme(..)
-    , Format(..)
+    , Allowed
+    , module Debug
+    , bounds
+    , debug
+    , formats
+    , allow
+    , placeholder
+    , readOnly
+    , strict
+    , theme
     ) where
 
 import Prelude
 
-import Data.Foreign (Foreign, toForeign)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Foldable (foldMap)
+import Data.Foreign (toForeign)
+import Data.Newtype (unwrap)
+import Data.Op (Op(..))
+import Data.Options (Options(..), Option, (:=), opt, tag)
+import Data.Tuple (Tuple(..), fst)
 
 import DOM.HTML.Types (HTMLElement)
 
-import Quill.Types (null)
+import Quill.API.Debug (Debug)
+import Quill.API.Debug as Debug
+import Quill.API.Formats (Formats)
+
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | https://quilljs.com/docs/configuration/
-type Config =
-    { bounds      :: Maybe HTMLElement
-    , debug       :: DebugLevel
-    , formats     :: Array Format
-    -- , modules :: not currently implemented
-    , placeholder :: String
-    , readonly    :: Boolean
-    , strict      :: Boolean
-    , theme       :: Theme
-    }
+data Config
 
--- | A `Config` instance with reasonable defaults
-defaultConfig :: Config
-defaultConfig =
-    { bounds: Nothing
-    , debug: DebugOff
-    , formats: []
-    , placeholder: ""
-    , readonly: false
-    , strict: true
-    , theme: CustomTheme ""
-    }
-
--- | Convert `Config` to it's javascript representation.
-configToForeign :: Config -> Foreign
-configToForeign cfg = toForeign $ cfg
-    { bounds      = maybe null toForeign cfg.bounds -- TODO
-    , debug       = debugLevelToForeign cfg.debug
-    , formats     = toForeign $ formatToForeign <$> cfg.formats
-    , placeholder = toForeign cfg.placeholder
-    , readonly    = toForeign cfg.readonly
-    , strict      = toForeign cfg.strict
-    , theme       = themeToForeign cfg.theme
-    }
+-- | https://quilljs.com/docs/configuration/#bounds
+bounds :: Option Config HTMLElement
+bounds = opt "bounds"
 
 -- | https://quilljs.com/docs/api/#debug
-data DebugLevel
-    = DebugError  -- 'error'
-    | DebugWarn   -- 'warn'
-    | DebugLog    -- 'log'
-    | DebugInfo   -- 'info'
-    | DebugOff    -- false
+debug :: Option Config Debug
+debug = opt "bounds"
 
-derive instance eqDebugLevel :: Eq DebugLevel
+-- | https://quilljs.com/docs/configuration/#formats
+formats :: Option Config (Array Allowed )
+formats = optWith formatKeys "formats"
+    where
+        formatKeys :: Array Allowed -> Array String
+        formatKeys = (foldMap \(Allowed o) -> o := unit)
+                 >>> (unwrap >>> map fst)
 
-debugLevelToForeign :: DebugLevel -> Foreign
-debugLevelToForeign = case _ of
-    DebugError -> toForeign "error"
-    DebugWarn  -> toForeign "warn"
-    DebugLog   -> toForeign "log"
-    DebugInfo  -> toForeign "info"
-    DebugOff   -> toForeign false   -- because js
+-- | Specifies a whitelisted format option.
+newtype Allowed = Allowed (Option Formats Unit)
+
+-- | Whitelist a format option.
+allow :: forall a. Option Formats a -> Allowed
+allow o = Allowed (tag o (unsafeCoerce unit))
+
+-- | https://quilljs.com/docs/configuration/#placeholder
+placeholder :: Option Config String
+placeholder = opt "placeholder"
+
+-- | https://quilljs.com/docs/configuration/#readonly
+readOnly :: Option Config Boolean
+readOnly = opt "readOnly"
+
+-- | https://quilljs.com/docs/configuration/#strict
+strict :: Option Config Boolean
+strict = opt "readOnly"
+
+-- | https://quilljs.com/docs/configuration/#theme
+theme :: Option Config Theme
+theme = optWith show "theme"
 
 -- | https://quilljs.com/docs/themes/
 data Theme
@@ -76,61 +78,10 @@ data Theme
     | SnowTheme    -- 'snow'   (builtin)
     | CustomTheme String
 
-derive instance eqTheme :: Eq Theme
+instance showTheme :: Show Theme where
+    show BubbleTheme = "bubble"
+    show SnowTheme   = "snow"
+    show (CustomTheme name) = name
 
-themeToForeign :: Theme -> Foreign
-themeToForeign = toForeign <<< case _ of
-    BubbleTheme      -> "bubble"
-    SnowTheme        -> "snow"
-    CustomTheme name -> name
-
--- | https://quilljs.com/docs/formats/
-data Format
-    = BackgroundColor
-    | Bold
-    | Color
-    | Font
-    | InlineCode
-    | Italic
-    | Link
-    | Size
-    | Strikethrough
-    | SuperscriptSubscript
-    | Underline
-    | Blockquote
-    | Header
-    | Indent
-    | List
-    | TextAlignment
-    | TextDirection
-    | CodeBlock
-    | Formula
-    | Image
-    | Video
-
-derive instance eqFormat :: Eq Format
-
-formatToForeign :: Format -> Foreign
-formatToForeign = toForeign <<< case _ of
-    BackgroundColor      -> "background"
-    Bold                 -> "bold"
-    Color                -> "color"
-    Font                 -> "font"
-    InlineCode           -> "code"
-    Italic               -> "italic"
-    Link                 -> "link"
-    Size                 -> "size"
-    Strikethrough        -> "strike"
-    SuperscriptSubscript -> "script"
-    Underline            -> "underline"
-    Blockquote           -> "blockquote"
-    Header               -> "header"
-    Indent               -> "indent"
-    List                 -> "list"
-    TextAlignment        -> "align"
-    TextDirection        -> "direction"
-    CodeBlock            -> "code-block"
-    Formula              -> "formula"
-    Image                -> "image"
-    Video                -> "video"
-
+optWith :: forall opt a b . (a -> b) -> String -> Option opt a
+optWith f = Op <<< \k v -> Options [Tuple k (toForeign $ f v)]

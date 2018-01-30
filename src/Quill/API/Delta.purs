@@ -1,6 +1,6 @@
 module Quill.API.Delta
-    ( Deltas
-    , readDeltas
+    ( Ops
+    , readOps
     , Delta(..)
     , readDelta
     ) where
@@ -10,40 +10,41 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Monad.Error.Class (throwError)
 
+import Data.Array as A
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, ForeignError(..),
-                     readString, readInt, readArray)
+import Data.Foreign (F, Foreign, ForeignError(..), readString, readInt, readArray)
 import Data.Foreign.Index ((!))
 import Data.Foreign.Keys (keys)
 import Data.List.NonEmpty (singleton)
+import Data.Options (Options(..))
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 
 import Quill.API.Embed (Embed(..))
-import Quill.API.FormatSpec (FormatSpec, readFormatSpec)
+import Quill.API.Formats (Formats)
 
-type Deltas = Array Delta
+type Ops = Array Delta
 
-readDeltas :: Foreign -> F Deltas
-readDeltas = readArray >=> traverse readDelta
+readOps :: Foreign -> F Ops
+readOps = (_ ! "ops") >=> readArray >=> traverse readDelta
 
 -- | https://quilljs.com/docs/delta/
 data Delta
-    = Insert (Either Embed String) (Array FormatSpec)
+    = Insert (Either Embed String) (Options Formats)
     | Delete Int
-    | Retain Int (Array FormatSpec)
+    | Retain Int (Options Formats)
 
 -- | Attempt to read in a Delta from a `Foreign` value.
 readDelta :: Foreign -> F Delta
 readDelta f = do
-    keys' <- keys f
+    keys' <- A.sortBy (flip compare) <$> keys f
     case keys' of
         [ "insert" ] -> do
             value <- f ! "insert" >>= \v ->
                         (readString v <#> Right)
                     <|> (v ! "image" >>= readString <#> Left <<< Image)
                     <|> (v ! "Video" >>= readString <#> Left <<< Video)
-            pure $ Insert value []
+            pure $ Insert value (Options [])
 
         [ "insert", "attributes" ] -> do
             value <- f ! "insert" >>= \v ->
@@ -52,8 +53,8 @@ readDelta f = do
                     <|> (v ! "Video" >>= readString <#> Left <<< Video)
 
             attrs <- f ! "attributes"
-            fmts  <- keys attrs >>= traverse \(k :: String) -> do
-                        readFormatSpec =<< (attrs ! k <#> Tuple k)
+            fmts  <- Options <$> (
+                keys attrs >>= traverse \k -> Tuple k <$> attrs ! k)
 
             pure $ Insert value fmts
 
@@ -61,14 +62,14 @@ readDelta f = do
             f ! "delete" >>= readInt <#> Delete
 
         [ "retain" ] -> do
-            f ! "retain" >>= readInt <#> flip Retain []
+            f ! "retain" >>= readInt <#> flip Retain (Options [])
 
         [ "retain", "attributes" ] -> do
             value <- f ! "retain" >>= readInt
 
             attrs <- f ! "attributes"
-            fmts  <- keys attrs >>= traverse \(k :: String) -> do
-                        readFormatSpec =<< (attrs ! k <#> Tuple k)
+            fmts  <- Options <$> (
+                keys attrs >>= traverse \k -> Tuple k <$> attrs ! k)
 
             pure $ Retain value fmts
 

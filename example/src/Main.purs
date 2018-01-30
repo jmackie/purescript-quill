@@ -6,9 +6,12 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 
+import Data.Array as A
 import Data.Either (Either(..), either)
-import Data.Foreign (toForeign)
+import Data.Foreign (MultipleErrors, toForeign, renderForeignError)
 import Data.Maybe (Maybe(..))
+import Data.Options ((:=))
+import Data.String as S
 
 import DOM (DOM)
 import DOM.HTML (window)
@@ -18,9 +21,11 @@ import DOM.Node.Types (Element)
 import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
 
 import Quill as Q
+import Quill.API as API
+import Quill.API.Formats as Formats
+import Quill.API.Source as Source
 import Quill.Config as QC
 import Quill.Types (QUILL)
-import Quill.API.Content as API
 
 main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
 main = do
@@ -32,24 +37,26 @@ main = do
 
     case target of
         Just el -> do
-            let cfg = QC.defaultConfig
-                        { debug = QC.DebugWarn
-                        , theme = QC.SnowTheme
-                        , formats =
-                             [ QC.Header
-                             , QC.Bold
-                             , QC.Italic
-                             , QC.Underline
-                             , QC.Link
-                             , QC.List
-                             ]
-                        , placeholder = "Write here!"
-                        }
+            let cfg = QC.debug       := QC.DebugWarn
+                   <> QC.theme       := QC.SnowTheme
+                   <> QC.placeholder := "Write here!"
+                   <> QC.formats := [ QC.allow Formats.bold
+                                    , QC.allow Formats.italic
+                                    , QC.allow Formats.underline
+                                    , QC.allow Formats.header
+                                    ]
             editor <- Q.editor cfg el
 
-            API.getLength editor >>= (case _ of
-                 Left _    -> log   "getLength failed!"
-                 Right len -> log $ "editor length is: " <> show len)
+            API.getLength editor
+                >>= \end -> API.insertText
+                    (either (const 0) id end)
+                    "I'm bold"
+                    (Formats.bold := true)
+                    Source.API
+                    editor
+                >>= (case _ of
+                    Left why  -> log $ "insertText failed: " <> renderMultipleErrors why
+                    Right ops -> log $ "insertText deltas: " <> (show $ A.length ops))
 
             pure unit
         Nothing -> do
@@ -63,3 +70,5 @@ elementToHTMLElement =
     >>> runExcept
     >>> either (const Nothing) Just
 
+renderMultipleErrors :: MultipleErrors -> String
+renderMultipleErrors = S.joinWith ", " <<< A.fromFoldable <<< map renderForeignError

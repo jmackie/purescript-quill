@@ -53,3 +53,5 @@ exports.updateContentsImpl = function(self, delta, source) {
         return self.updateContents(delta, source);
     };
 };
+
+exports.null = null;
