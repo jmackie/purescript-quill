@@ -2,8 +2,7 @@ module Quill.API.Source (Source(..)) where
 
 import Prelude
 
--- | Source may be "user", "api", or "silent". Calls where the source is "user"
--- | when the editor is disabled are ignored.
+-- | NOTE: Calls where the source is "user" when the editor is disabled are ignored.
 data Source
     = User
     | API

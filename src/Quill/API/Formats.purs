@@ -1,5 +1,9 @@
 module Quill.API.Formats
     ( Formats
+    , SingleFormat
+    , singleFormat
+    , name
+    , value
     , Alignment(..)
     , FontName
     , background
@@ -23,12 +27,16 @@ import Prelude
 
 import Color (Color, toHexString)
 
-import Data.Maybe (Maybe(..))
+import Data.Array (head)
+import Data.Foreign (Foreign, toForeign)
+import Data.Maybe (Maybe(..), fromJust)
+import Data.Newtype (unwrap)
 import Data.Op (Op(..))
-import Data.Foreign (toForeign)
-import Data.Options (Options(..), Option, opt)
+import Data.Options (Options(..), Option, opt, assoc)
 import Data.String.Read (class Read)
 import Data.Tuple (Tuple(..))
+
+import Partial.Unsafe (unsafePartial)
 
 -- | https://quilljs.com/docs/formats/
 data Formats
@@ -97,6 +105,17 @@ instance readAlignment :: Read Alignment where
     read "right"   = Just Right
     read "justify" = Just Justify
     read _         = Nothing
+
+newtype SingleFormat = SingleFormat (Tuple String Foreign)
+
+singleFormat :: forall a. Option Formats a -> a -> SingleFormat
+singleFormat o v = SingleFormat $ unsafePartial $ fromJust $ head $ unwrap $ assoc o v
+
+name :: SingleFormat -> String
+name (SingleFormat (Tuple n _)) = n
+
+value :: SingleFormat -> Foreign
+value (SingleFormat (Tuple _ v)) = v
 
 -- | E.g. "sans-serif"
 type FontName = String

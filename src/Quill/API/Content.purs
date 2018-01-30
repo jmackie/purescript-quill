@@ -26,6 +26,7 @@ import Quill (Editor)
 import Quill.API.Delta (Ops, readOps, opsToForeign)
 import Quill.API.Embed (Embed(..))
 import Quill.API.Formats (Formats)
+import Quill.API.Range (Range, Index, index, Length, length)
 import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
@@ -33,38 +34,36 @@ import Quill.Types (QUILL)
 
 import Unsafe.Coerce (unsafeCoerce)
 
-type DefaultArg = Maybe
-
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#deletetext
--- | NOTE: I think this might actually return an array of Deltass...
 deleteText
     :: forall eff
-     . Int
-    -> Int
+     . Range
     -> DefaultArg Source
     -> Editor
     -> Eff (quill :: QUILL | eff) (Return Ops)
-deleteText index length source editor =
+deleteText range source editor =
     runExcept <<< readOps <$> runFn4 deleteTextImpl
         editor
-        index
-        length
+        (index range)
+        (length range)
         (fromMaybe Source.API source # show)
 
 foreign import deleteTextImpl
     :: forall eff
      . Fn4
         Editor -- self
-        Int    -- index
-        Int    -- length
+        Index  -- index
+        Length -- length
         String -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#getcontents
 getContents
     :: forall eff
-     . Int
-    -> DefaultArg Int
+     . Index
+    -> DefaultArg Length
     -> Editor
     -> Eff (quill :: QUILL | eff) (Return Ops)
 getContents index length editor =
@@ -77,10 +76,11 @@ foreign import getContentsImpl
     :: forall eff
      . Fn3
         Editor -- self
-        Int    -- index
-        Int    -- length
+        Index  -- index
+        Length -- length
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#getlength
 getLength
     :: forall eff
@@ -96,11 +96,12 @@ foreign import getLengthImpl
         Editor -- self
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#gettext
 getText
     :: forall eff
-     . Int
-    -> DefaultArg Int
+     . Index
+    -> DefaultArg Length
     -> Editor
     -> Eff (quill :: QUILL | eff) (Return String)
 getText index length editor =
@@ -113,18 +114,20 @@ foreign import getTextImpl
     :: forall eff
      . Fn3
         Editor -- self
-        Int    -- index
-        Int    -- length
+        Index  -- index
+        Length -- length
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#insertembed
 insertEmbed
     :: forall eff
-     . Int
+     . Index
     -> Embed
     -> Source
     -> Editor
     -> Eff (quill :: QUILL | eff) (Return Ops)
+
 insertEmbed index (Image url) source self =
     runExcept <<< readOps <$> runFn5 insertEmbedImpl
         self
@@ -132,6 +135,7 @@ insertEmbed index (Image url) source self =
         "image"
         url
         (show source)
+
 insertEmbed index (Video url) source self =
     runExcept <<< readOps <$> runFn5 insertEmbedImpl
         self
@@ -144,16 +148,17 @@ foreign import insertEmbedImpl
     :: forall eff
      . Fn5
         Editor -- self
-        Int    -- index
+        Index  -- index
         String -- type
         String -- value
         String -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#inserttext
 insertText
     :: forall eff
-     . Int
+     . Index
     -> String
     -> Options Formats
     -> Source
@@ -171,12 +176,13 @@ foreign import insertTextImpl
     :: forall eff
      . Fn5
         Editor  -- self
-        Int     -- index
+        Index   -- index
         String  -- text
         Foreign -- formats
         String  -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#setcontents
 setContents
     :: forall eff
@@ -198,6 +204,7 @@ foreign import setContentsImpl
         String  -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#settext
 setText
     :: forall eff
@@ -219,6 +226,7 @@ foreign import setTextImpl
         String -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#updatecontents
 updateContents
     :: forall eff
@@ -240,4 +248,9 @@ foreign import updateContentsImpl
         String  -- source
         (Eff (quill :: QUILL | eff) Foreign)
 
+--------------------------------------------------------------------------------
+
+type DefaultArg = Maybe
+
 foreign import undefined :: Foreign -- for optional arguments
+

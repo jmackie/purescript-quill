@@ -49,12 +49,12 @@ formats = optWith formatKeys "formats"
         formatKeys = (foldMap \(Allowed o) -> o := unit)
                  >>> (unwrap >>> map fst)
 
--- | Specifies a whitelisted format option.
-newtype Allowed = Allowed (Option Formats Unit)
-
 -- | Whitelist a format option.
 allow :: forall a. Option Formats a -> Allowed
 allow o = Allowed (tag o (unsafeCoerce unit))
+
+-- | A whitelisted format option.
+newtype Allowed = Allowed (Option Formats Unit)
 
 -- | https://quilljs.com/docs/configuration/#placeholder
 placeholder :: Option Config String

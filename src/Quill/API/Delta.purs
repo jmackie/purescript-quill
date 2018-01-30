@@ -26,6 +26,7 @@ import Data.Tuple (Tuple(..))
 import Quill.API.Embed (Embed(..))
 import Quill.API.Formats (Formats)
 
+-- | https://quilljs.com/docs/delta/
 type Ops = Array Delta
 
 readOps :: Foreign -> F Ops
@@ -41,7 +42,6 @@ data Delta
     | Delete Int
     | Retain Int (Options Formats)
 
--- | Attempt to read in a Delta from a `Foreign` value.
 readDelta :: Foreign -> F Delta
 readDelta f = do
     keys' <- A.sortBy (flip compare) <$> keys f
