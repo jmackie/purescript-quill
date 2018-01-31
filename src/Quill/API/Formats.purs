@@ -1,11 +1,11 @@
 module Quill.API.Formats
     ( Formats
     , SingleFormat
+    , Alignment(..)
+    , FontName
     , singleFormat
     , name
     , value
-    , Alignment(..)
-    , FontName
     , background
     , color
     , bold
@@ -29,11 +29,10 @@ import Color (Color, toHexString)
 
 import Data.Array (head)
 import Data.Foreign (Foreign, toForeign)
-import Data.Maybe (Maybe(..), fromJust)
+import Data.Maybe (fromJust)
 import Data.Newtype (unwrap)
 import Data.Op (Op(..))
 import Data.Options (Options(..), Option, opt, assoc)
-import Data.String.Read (class Read)
 import Data.Tuple (Tuple(..))
 
 import Partial.Unsafe (unsafePartial)
@@ -98,13 +97,6 @@ instance showAlignment :: Show Alignment where
     show Center = "center"
     show Right  = "right"
     show _      = "justify" -- HACK: see `optWith` comment below
-
-instance readAlignment :: Read Alignment where
-    read "left"    = Just Left
-    read "center"  = Just Center
-    read "right"   = Just Right
-    read "justify" = Just Justify
-    read _         = Nothing
 
 newtype SingleFormat = SingleFormat (Tuple String Foreign)
 
