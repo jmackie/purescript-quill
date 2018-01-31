@@ -12,7 +12,7 @@ import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign)
 import Data.Function.Uncurried (Fn4, runFn4, Fn5, runFn5)
-import Data.Maybe (Maybe, fromMaybe)
+import Data.Maybe (Maybe)
 import Data.Options (Options, options)
 
 import Quill (Editor)
@@ -21,7 +21,6 @@ import Quill.API.Delta (Ops, readOps)
 import Quill.API.Formats (Formats, SingleFormat, name, value)
 import Quill.API.Range (Range, Index, Length, index, length)
 import Quill.API.Source (Source)
-import Quill.API.Source as Source
 import Quill.Types (QUILL)
 
 --------------------------------------------------------------------------------
@@ -29,7 +28,7 @@ import Quill.Types (QUILL)
 format
     :: forall eff
      . SingleFormat
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 format fmt source editor =
@@ -38,7 +37,7 @@ format fmt source editor =
             editor
             (name fmt)
             (value fmt)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import formatImpl
     :: forall eff
@@ -55,7 +54,7 @@ formatLine
     :: forall eff
      . Range
     -> Options Formats
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 formatLine range formats source editor =
@@ -65,7 +64,7 @@ formatLine range formats source editor =
             (index range)
             (length range)
             (options formats)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import formatLineImpl
     :: forall eff
@@ -83,7 +82,7 @@ formatText
     :: forall eff
      . Range
     -> Options Formats
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 formatText range formats source editor =
@@ -93,7 +92,7 @@ formatText range formats source editor =
             (index range)
             (length range)
             (options formats)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import formatTextImpl
     :: forall eff
@@ -110,7 +109,7 @@ foreign import formatTextImpl
 removeFormat
     :: forall eff
      . Range
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 removeFormat range source editor =
@@ -119,7 +118,7 @@ removeFormat range source editor =
             editor
             (index range)
             (length range)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import removeFormatImpl
     :: forall eff

@@ -18,7 +18,6 @@ import Quill (Editor)
 import Quill.API.API (API, handleReturn)
 import Quill.API.Range (Range, Index, Length, readRange, index, length)
 import Quill.API.Source (Source)
-import Quill.API.Source as Source
 import Quill.Types (QUILL)
 
 --------------------------------------------------------------------------------
@@ -76,7 +75,7 @@ foreign import getSelectionImpl
 setSelection
     :: forall eff
      . Range
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Unit
 setSelection range source editor =
@@ -85,7 +84,7 @@ setSelection range source editor =
             editor
             (index range)
             (length range)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import setSelectionImpl
     :: forall eff

@@ -14,12 +14,11 @@ import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign, readBoolean)
 import Data.Function.Uncurried (Fn1, runFn1, Fn2, runFn2)
-import Data.Maybe (Maybe, fromMaybe)
+import Data.Maybe (Maybe)
 
 import Quill (Editor)
 import Quill.API.API (API, handleReturn)
 import Quill.API.Source (Source)
-import Quill.API.Source as Source
 import Quill.Types (QUILL)
 
 --------------------------------------------------------------------------------
@@ -115,14 +114,14 @@ foreign import hasFocusImpl
 -- | https://quilljs.com/docs/api/#update
 update
     :: forall eff
-     . DefaultArg Source
+     . Source
     -> Editor
     -> Eff (quill :: QUILL | eff) Unit
 update source editor =
     void <<< liftEff $
         runFn2 updateImpl
             editor
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import updateImpl
     :: forall eff

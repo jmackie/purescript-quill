@@ -29,7 +29,6 @@ import Quill.API.Embed (Embed(..))
 import Quill.API.Formats (Formats)
 import Quill.API.Range (Range, Index, Length, index, length)
 import Quill.API.Source (Source)
-import Quill.API.Source as Source
 import Quill.Types (QUILL)
 
 import Unsafe.Coerce (unsafeCoerce)
@@ -39,7 +38,7 @@ import Unsafe.Coerce (unsafeCoerce)
 deleteText
     :: forall eff
      . Range
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 deleteText range source editor =
@@ -48,7 +47,7 @@ deleteText range source editor =
             editor
             (index range)
             (length range)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import deleteTextImpl
     :: forall eff
@@ -194,7 +193,7 @@ foreign import insertTextImpl
 setContents
     :: forall eff
      . Ops
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 setContents ops source self =
@@ -202,7 +201,7 @@ setContents ops source self =
         runFn3 setContentsImpl
             self
             (opsToForeign ops)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import setContentsImpl
     :: forall eff
@@ -217,7 +216,7 @@ foreign import setContentsImpl
 setText
     :: forall eff
      . String
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 setText text source self =
@@ -225,7 +224,7 @@ setText text source self =
         runFn3 setTextImpl
             self
             text
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import setTextImpl
     :: forall eff
@@ -240,7 +239,7 @@ foreign import setTextImpl
 updateContents
     :: forall eff
      . Ops
-    -> DefaultArg Source
+    -> Source
     -> Editor
     -> API (quill :: QUILL | eff) Ops
 updateContents ops source self =
@@ -248,7 +247,7 @@ updateContents ops source self =
         runFn3 updateContentsImpl
             self
             (opsToForeign ops)
-            (fromMaybe Source.API source # show)
+            (show source)
 
 foreign import updateContentsImpl
     :: forall eff
