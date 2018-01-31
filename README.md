@@ -2,7 +2,17 @@
 
 [![Build status](https://travis-ci.org/jmackie4/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie4/purescript-quill)
 
-(WIP) PureScript bindings for [quilljs](https://quilljs.com/).
+<a href="http://purescript.org" title="Purescript">
+    <img alt="Purescript Logo" src="img/purescript-logo.svg" height="120">
+</a>
+&nbsp;
+<a href="https://quilljs.com/"  title="Quill">
+    <img alt="Quill Logo" src="img/quilljs-logo.svg" height="100">
+</a>
+&nbsp;
+<a href="http://purescript.org" title="Purescript">
+    <img alt="Purescript Logo" src="img/purescript-logo.svg" height="120">
+</a>
 
 ## Installation
 
@@ -29,3 +39,4 @@ $ open example/dist/index.html
 
 WIP.
 
+[quilljs]: https://quilljs.com/
