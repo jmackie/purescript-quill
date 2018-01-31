@@ -13,7 +13,7 @@ module Quill.API.Content
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Eff.Class (liftEff)
 
 import Data.Function.Uncurried (Fn1, runFn1, Fn3, runFn3,
                                 Fn4, runFn4, Fn5, runFn5)
@@ -23,11 +23,11 @@ import Data.Maybe (Maybe, fromMaybe)
 import Data.Options (Options, options)
 
 import Quill (Editor)
+import Quill.API.API (API, handleReturn)
 import Quill.API.Delta (Ops, readOps, opsToForeign)
 import Quill.API.Embed (Embed(..))
 import Quill.API.Formats (Formats)
 import Quill.API.Range (Range, Index, Length, index, length)
-import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
 import Quill.Types (QUILL)
@@ -41,13 +41,14 @@ deleteText
      . Range
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 deleteText range source editor =
-    runExcept <<< readOps <$> runFn4 deleteTextImpl
-        editor
-        (index range)
-        (length range)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn4 deleteTextImpl
+            editor
+            (index range)
+            (length range)
+            (fromMaybe Source.API source # show)
 
 foreign import deleteTextImpl
     :: forall eff
@@ -65,12 +66,13 @@ getContents
      . Index
     -> DefaultArg Length
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 getContents index length editor =
-    runExcept <<< readOps <$> runFn3 getContentsImpl
-        editor
-        index
-        (fromMaybe (unsafeCoerce undefined) length)
+    handleReturn readOps <=< liftEff $
+        runFn3 getContentsImpl
+            editor
+            index
+            (fromMaybe (unsafeCoerce undefined) length)
 
 foreign import getContentsImpl
     :: forall eff
@@ -85,10 +87,11 @@ foreign import getContentsImpl
 getLength
     :: forall eff
      . Editor
-    -> Eff (quill :: QUILL | eff) (Return Int)
+    -> API (quill :: QUILL | eff) Int
 getLength editor =
-    runExcept <<< readInt <$> runFn1 getLengthImpl
-        editor
+    handleReturn readInt <=< liftEff $
+        runFn1 getLengthImpl
+            editor
 
 foreign import getLengthImpl
     :: forall eff
@@ -103,12 +106,13 @@ getText
      . Index
     -> DefaultArg Length
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return String)
+    -> API (quill :: QUILL | eff) String
 getText index length editor =
-    runExcept <<< readString <$> runFn3 getTextImpl
-        editor
-        index
-        (fromMaybe (unsafeCoerce undefined) length)
+    handleReturn readString <=< liftEff $
+        runFn3 getTextImpl
+            editor
+            index
+            (fromMaybe (unsafeCoerce undefined) length)
 
 foreign import getTextImpl
     :: forall eff
@@ -126,23 +130,25 @@ insertEmbed
     -> Embed
     -> Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 
 insertEmbed index (Image url) source self =
-    runExcept <<< readOps <$> runFn5 insertEmbedImpl
-        self
-        index
-        "image"
-        url
-        (show source)
+    handleReturn readOps <=< liftEff $
+        runFn5 insertEmbedImpl
+            self
+            index
+            "image"
+            url
+            (show source)
 
 insertEmbed index (Video url) source self =
-    runExcept <<< readOps <$> runFn5 insertEmbedImpl
-        self
-        index
-        "video"
-        url
-        (show source)
+    handleReturn readOps <=< liftEff $
+        runFn5 insertEmbedImpl
+            self
+            index
+            "video"
+            url
+            (show source)
 
 foreign import insertEmbedImpl
     :: forall eff
@@ -163,14 +169,15 @@ insertText
     -> Options Formats
     -> Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 insertText index text formats source self =
-    runExcept <<< readOps <$> runFn5 insertTextImpl
-        self
-        index
-        text
-        (options formats)
-        (show source)
+    handleReturn readOps <=< liftEff $
+        runFn5 insertTextImpl
+            self
+            index
+            text
+            (options formats)
+            (show source)
 
 foreign import insertTextImpl
     :: forall eff
@@ -189,12 +196,13 @@ setContents
      . Ops
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 setContents ops source self =
-    runExcept <<< readOps <$> runFn3 setContentsImpl
-        self
-        (opsToForeign ops)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn3 setContentsImpl
+            self
+            (opsToForeign ops)
+            (fromMaybe Source.API source # show)
 
 foreign import setContentsImpl
     :: forall eff
@@ -211,12 +219,13 @@ setText
      . String
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 setText text source self =
-    runExcept <<< readOps <$> runFn3 setTextImpl
-        self
-        text
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn3 setTextImpl
+            self
+            text
+            (fromMaybe Source.API source # show)
 
 foreign import setTextImpl
     :: forall eff
@@ -233,12 +242,13 @@ updateContents
      . Ops
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 updateContents ops source self =
-    runExcept <<< readOps <$> runFn3 updateContentsImpl
-        self
-        (opsToForeign ops)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn3 updateContentsImpl
+            self
+            (opsToForeign ops)
+            (fromMaybe Source.API source # show)
 
 foreign import updateContentsImpl
     :: forall eff

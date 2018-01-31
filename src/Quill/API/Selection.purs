@@ -7,7 +7,7 @@ module Quill.API.Selection
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign, F, readNumber)
 import Data.Foreign.Index ((!))
@@ -15,8 +15,8 @@ import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3, Fn4, runFn4)
 import Data.Maybe (Maybe, fromMaybe)
 
 import Quill (Editor)
+import Quill.API.API (API, handleReturn)
 import Quill.API.Range (Range, Index, Length, readRange, index, length)
-import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
 import Quill.Types (QUILL)
@@ -28,12 +28,13 @@ getBounds
      . Index
     -> DefaultArg Length
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Bounds)
+    -> API (quill :: QUILL | eff) Bounds
 getBounds index length editor =
-    runExcept <<< readBounds <$> runFn3 getBoundsImpl
-        editor
-        index
-        (fromMaybe 0 length)
+    handleReturn readBounds <=< liftEff $
+        runFn3 getBoundsImpl
+            editor
+            index
+            (fromMaybe 0 length)
     where
         readBounds :: Foreign -> F Bounds
         readBounds value = { left:_, top:_, height:_, width:_ }
@@ -56,11 +57,12 @@ getSelection
     :: forall eff
      . Boolean
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Range)
+    -> API (quill :: QUILL | eff) Range
 getSelection focus editor =
-    runExcept <<< readRange <$> runFn2 getSelectionImpl
-        editor
-        focus
+    handleReturn readRange <=< liftEff $
+        runFn2 getSelectionImpl
+            editor
+            focus
 
 foreign import getSelectionImpl
     :: forall eff
@@ -76,13 +78,14 @@ setSelection
      . Range
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) Unit
+    -> API (quill :: QUILL | eff) Unit
 setSelection range source editor =
-    void $ runFn4 setSelectionImpl
-        editor
-        (index range)
-        (length range)
-        (fromMaybe Source.API source # show)
+    void <<< liftEff $
+        runFn4 setSelectionImpl
+            editor
+            (index range)
+            (length range)
+            (fromMaybe Source.API source # show)
 
 foreign import setSelectionImpl
     :: forall eff

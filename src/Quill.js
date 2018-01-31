@@ -2,9 +2,9 @@
 
 exports.quill = Quill; // fail early if quilljs isn't available.
 
-exports.editorImpl = function(self, el, config) {
+exports.editorImpl = function(quill, el, config) {
     return function() {
-        var editor = new self(el, config);
+        var editor = new quill(el, config);
         return editor;
     };
 };

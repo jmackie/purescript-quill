@@ -8,7 +8,7 @@ module Quill.API.Formatting
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign)
 import Data.Function.Uncurried (Fn4, runFn4, Fn5, runFn5)
@@ -16,10 +16,10 @@ import Data.Maybe (Maybe, fromMaybe)
 import Data.Options (Options, options)
 
 import Quill (Editor)
+import Quill.API.API (API, handleReturn)
 import Quill.API.Delta (Ops, readOps)
 import Quill.API.Formats (Formats, SingleFormat, name, value)
 import Quill.API.Range (Range, Index, Length, index, length)
-import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
 import Quill.Types (QUILL)
@@ -31,13 +31,14 @@ format
      . SingleFormat
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 format fmt source editor =
-    runExcept <<< readOps <$> runFn4 formatImpl
-        editor
-        (name fmt)
-        (value fmt)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn4 formatImpl
+            editor
+            (name fmt)
+            (value fmt)
+            (fromMaybe Source.API source # show)
 
 foreign import formatImpl
     :: forall eff
@@ -56,14 +57,15 @@ formatLine
     -> Options Formats
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 formatLine range formats source editor =
-    runExcept <<< readOps <$> runFn5 formatLineImpl
-        editor
-        (index range)
-        (length range)
-        (options formats)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn5 formatLineImpl
+            editor
+            (index range)
+            (length range)
+            (options formats)
+            (fromMaybe Source.API source # show)
 
 foreign import formatLineImpl
     :: forall eff
@@ -83,14 +85,15 @@ formatText
     -> Options Formats
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 formatText range formats source editor =
-    runExcept <<< readOps <$> runFn5 formatTextImpl
-        editor
-        (index range)
-        (length range)
-        (options formats)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn5 formatTextImpl
+            editor
+            (index range)
+            (length range)
+            (options formats)
+            (fromMaybe Source.API source # show)
 
 foreign import formatTextImpl
     :: forall eff
@@ -109,13 +112,14 @@ removeFormat
      . Range
     -> DefaultArg Source
     -> Editor
-    -> Eff (quill :: QUILL | eff) (Return Ops)
+    -> API (quill :: QUILL | eff) Ops
 removeFormat range source editor =
-    runExcept <<< readOps <$> runFn4 removeFormatImpl
-        editor
-        (index range)
-        (length range)
-        (fromMaybe Source.API source # show)
+    handleReturn readOps <=< liftEff $
+        runFn4 removeFormatImpl
+            editor
+            (index range)
+            (length range)
+            (fromMaybe Source.API source # show)
 
 foreign import removeFormatImpl
     :: forall eff

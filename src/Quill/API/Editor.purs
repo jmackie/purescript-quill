@@ -10,14 +10,14 @@ module Quill.API.Editor
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign, readBoolean)
 import Data.Function.Uncurried (Fn1, runFn1, Fn2, runFn2)
 import Data.Maybe (Maybe, fromMaybe)
 
 import Quill (Editor)
-import Quill.API.Return (Return)
+import Quill.API.API (API, handleReturn)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
 import Quill.Types (QUILL)
@@ -27,10 +27,11 @@ import Quill.Types (QUILL)
 blur
     :: forall eff
      . Editor
-    -> Eff (quill :: QUILL | eff) Unit
+    -> API (quill :: QUILL | eff) Unit
 blur editor =
-    void $ runFn1 blurImpl
-        editor
+    void <<< liftEff $
+        runFn1 blurImpl
+            editor
 
 foreign import blurImpl
     :: forall eff
@@ -43,10 +44,11 @@ foreign import blurImpl
 disable
     :: forall eff
      . Editor
-    -> Eff (quill :: QUILL | eff) Unit
+    -> API (quill :: QUILL | eff) Unit
 disable editor =
-    void $ runFn1 disableImpl
-        editor
+    void <<< liftEff $
+        runFn1 disableImpl
+            editor
 
 foreign import disableImpl
     :: forall eff
@@ -60,11 +62,12 @@ enable
     :: forall eff
      . Boolean
     -> Editor
-    -> Eff (quill :: QUILL | eff) Unit
+    -> API (quill :: QUILL | eff) Unit
 enable enabled editor =
-    void $ runFn2 enableImpl
-        editor
-        enabled
+    void <<< liftEff $
+        runFn2 enableImpl
+            editor
+            enabled
 
 foreign import enableImpl
     :: forall eff
@@ -78,10 +81,11 @@ foreign import enableImpl
 focus
     :: forall eff
      . Editor
-    -> Eff (quill :: QUILL | eff) Unit
+    -> API (quill :: QUILL | eff) Unit
 focus editor =
-    void $ runFn1 focusImpl
-        editor
+    void <<< liftEff $
+        runFn1 focusImpl
+            editor
 
 foreign import focusImpl
     :: forall eff
@@ -94,10 +98,11 @@ foreign import focusImpl
 hasFocus
     :: forall eff
      . Editor
-    -> Eff (quill :: QUILL | eff) (Return Boolean)
+    -> API (quill :: QUILL | eff) Boolean
 hasFocus editor =
-    runExcept <<< readBoolean <$> runFn1 hasFocusImpl
-        editor
+    handleReturn readBoolean <=< liftEff $
+        runFn1 hasFocusImpl
+            editor
 
 foreign import hasFocusImpl
     :: forall eff
@@ -114,9 +119,10 @@ update
     -> Editor
     -> Eff (quill :: QUILL | eff) Unit
 update source editor =
-    void $ runFn2 updateImpl
-        editor
-        (fromMaybe Source.API source # show)
+    void <<< liftEff $
+        runFn2 updateImpl
+            editor
+            (fromMaybe Source.API source # show)
 
 foreign import updateImpl
     :: forall eff

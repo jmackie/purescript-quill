@@ -5,7 +5,6 @@ import Prelude
 import Color as Color
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Except (runExcept)
 
 import Data.Array as A
@@ -19,18 +18,22 @@ import Data.String as S
 import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.Window (document)
-import DOM.Node.ParentNode (querySelector, QuerySelector(..))
+import DOM.Node.ParentNode (QuerySelector(..), querySelector)
 import DOM.Node.Types (Element)
 import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
 
+import Partial (crashWith)
+import Partial.Unsafe (unsafePartial)
+
 import Quill as Q
-import Quill.API as API
+import Quill.API as QAPI
+import Quill.API (runAPI)
 import Quill.API.Delta (Delta(..))
 import Quill.API.Formats as QFmt
 import Quill.Config as QCfg
 import Quill.Types (QUILL)
 
-main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
+main :: forall e. Eff (dom :: DOM, quill :: QUILL | e) Unit
 main = do
     target <- window
             >>= document
@@ -38,8 +41,8 @@ main = do
                 >>> querySelector (QuerySelector "#editor"))
             <#> (_ >>= elementToHTMLElement)
 
-    case target of
-        Just el -> do
+    void $ case target of
+        Just el -> runAPI do
             let cfg = QCfg.debug       := QCfg.DebugWarn
                    <> QCfg.theme       := QCfg.SnowTheme
                    <> QCfg.placeholder := "Write here!"
@@ -52,7 +55,7 @@ main = do
                                           ]
             editor <- Q.editor cfg el
 
-            _ <- API.setContents
+            _ <- QAPI.setContents
                     [ Insert (Right "purescript-quill example\n") $
                         QFmt.header := 1 <>
                         QFmt.align  := QFmt.Center <>
@@ -64,7 +67,7 @@ main = do
                     Nothing
                     editor
 
-            _ <- API.updateContents
+            _ <- QAPI.updateContents
                     [ Retain (S.length "purescript-quill example\n") $
                         mempty
                     , Retain (S.length "Hello World") $
@@ -78,9 +81,8 @@ main = do
                     editor
 
             pure unit
-        Nothing -> do
-            log "editor not found!"
-            pure unit
+
+        Nothing -> unsafePartial $ crashWith "editor element not found!"
 
 elementToHTMLElement :: Element -> Maybe HTMLElement
 elementToHTMLElement =
@@ -91,3 +93,4 @@ elementToHTMLElement =
 
 renderMultipleErrors :: MultipleErrors -> String
 renderMultipleErrors = S.joinWith ", " <<< A.fromFoldable <<< map renderForeignError
+
