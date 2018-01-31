@@ -1,5 +1,6 @@
 # purescript-quill
 
+[![Pursuit version](https://pursuit.purescript.org/packages/purescript-quill/badge)][docs]
 ![Current tag](https://img.shields.io/github/tag/jmackie4/purescript-quill.svg)
 [![Build status](https://travis-ci.org/jmackie4/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie4/purescript-quill)
 
@@ -38,6 +39,8 @@ $ open example/dist/index.html
 
 ## Documentation
 
-WIP.
+Module documentation is [published on Pursuit][docs].
 
+[docs]: http://pursuit.purescript.org/packages/purescript-quill
+[pursuit badge]: https://pursuit.purescript.org/packages/purescript-quill/badge
 [quilljs]: https://quilljs.com/
