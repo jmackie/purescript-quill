@@ -1,9 +1,10 @@
 module Quill.API.Range
     ( Range(..)
-    , readRange
     , Index
-    , index
     , Length
+    , mkRange
+    , readRange
+    , index
     , length
     ) where
 
@@ -11,26 +12,25 @@ import Prelude
 
 import Data.Foreign (Foreign, F, readInt)
 import Data.Foreign.Index ((!))
-import Data.Newtype (class Newtype, unwrap)
 import Data.Tuple (Tuple(..), fst, snd)
 
-newtype Range = Range (Tuple Index Length)
+type Range = Tuple Index Length
 
-derive instance newtypeRange :: Newtype Range _
+mkRange :: Index -> Length -> Range
+mkRange = Tuple
 
 readRange :: Foreign -> F Range
-readRange value = do
-    i   <- value ! "index"  >>= readInt
-    len <- value ! "length" >>= readInt
-    pure $ Range $ Tuple i len
+readRange value = Tuple
+    <$> (value ! "index"  >>= readInt)
+    <*> (value ! "length" >>= readInt)
 
 type Index = Int
 
 index :: Range -> Index
-index = unwrap >>> fst
+index = fst
 
 type Length = Int
 
 length :: Range -> Length
-length = unwrap >>> snd
+length = snd
 

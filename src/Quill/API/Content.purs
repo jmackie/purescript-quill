@@ -26,7 +26,7 @@ import Quill (Editor)
 import Quill.API.Delta (Ops, readOps, opsToForeign)
 import Quill.API.Embed (Embed(..))
 import Quill.API.Formats (Formats)
-import Quill.API.Range (Range, Index, index, Length, length)
+import Quill.API.Range (Range, Index, Length, index, length)
 import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source

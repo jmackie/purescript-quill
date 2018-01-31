@@ -15,7 +15,7 @@ import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3, Fn4, runFn4)
 import Data.Maybe (Maybe, fromMaybe)
 
 import Quill (Editor)
-import Quill.API.Range (Range, readRange, Index, index, Length, length)
+import Quill.API.Range (Range, Index, Length, readRange, index, length)
 import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
@@ -78,7 +78,7 @@ setSelection
     -> Editor
     -> Eff (quill :: QUILL | eff) Unit
 setSelection range source editor =
-    runFn4 setSelectionImpl
+    void $ runFn4 setSelectionImpl
         editor
         (index range)
         (length range)

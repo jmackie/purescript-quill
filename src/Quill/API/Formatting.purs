@@ -18,7 +18,7 @@ import Data.Options (Options, options)
 import Quill (Editor)
 import Quill.API.Delta (Ops, readOps)
 import Quill.API.Formats (Formats, SingleFormat, name, value)
-import Quill.API.Range (Range, Index, index, Length, length)
+import Quill.API.Range (Range, Index, Length, index, length)
 import Quill.API.Return (Return)
 import Quill.API.Source (Source)
 import Quill.API.Source as Source
