@@ -1,5 +1,6 @@
 # purescript-quill
 
+![Current tag](https://img.shields.io/github/tag/jmackie4/purescript-quill.svg)
 [![Build status](https://travis-ci.org/jmackie4/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie4/purescript-quill)
 
 <a href="http://purescript.org" title="Purescript">

@@ -72,7 +72,7 @@ main = do
                             QFmt.italic := true
                         , Insert (Right "\n") mempty
                         ]
-                        Nothing
+                        QSource.API
                         editor
 
             -- Update initial content
@@ -86,7 +86,7 @@ main = do
                         , Insert (Right "?!") mempty
                         , Insert (Right "\n") mempty
                         ]
-                        Nothing
+                        QSource.API
                         editor
 
             -- Insert a raw string at the end of the editor
@@ -112,6 +112,17 @@ main = do
                         QSource.API
                         editor
 
+            -- Register callbacks
+            QAPI.onTextChange
+                    (\_ _ _ -> log $ "callback: text-change")
+                    (\errs  -> log $ "fallback: errors: " <> renderMultipleErrors errs)
+                    editor
+
+            QAPI.onSelectionChange
+                    (\_ _ _ -> log $ "callback: selection-change")
+                    QAPI.fallbackIgnore
+                    editor
+
             pure unit
 
     case result of
@@ -120,9 +131,7 @@ main = do
         Right _ ->
             pure unit
 
-
     pure unit
-
 
 elementToHTMLElement :: Element -> Maybe HTMLElement
 elementToHTMLElement =

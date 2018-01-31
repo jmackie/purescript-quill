@@ -1,11 +1,18 @@
-module Quill.API.Events where
+module Quill.API.Events
+    ( onTextChange
+    , onSelectionChange
+    , fallbackIgnore
+    ) where
 
 import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Except (runExcept)
 
-import Data.Function.Uncurried (Fn2, runFn2, Fn3, mkFn3)
+import Data.Either (Either(..))
+import Data.Foreign (Foreign, MultipleErrors)
+import Data.Function.Uncurried (Fn2, runFn2)
 
 import Quill (Editor)
 import Quill.API.API (API)
@@ -14,49 +21,65 @@ import Quill.API.Range (Range, readRange)
 import Quill.API.Source (Source, readSource)
 import Quill.Types (QUILL)
 
-type Callback = Ops -> Ops -> Source
-
 --------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#text-change
 onTextChange
-    :: forall a eff
-     . (Ops -> Ops -> Source -> a)
+    :: forall eff a
+     . (Ops -> Ops -> Source -> Eff eff a)
+    -> (MultipleErrors -> Eff eff a)
     -> Editor
     -> API (quill :: QUILL | eff) Unit
-onTextChange callback editor = do
+onTextChange callback fallback editor = do
     let callback' a b c = do
-            delta <- readOps a
-            oldContents <- readOps b
-            source <- readSource c
-            pure $ callback delta oldContents source
-    void $ liftEff $ runFn2 onTextChangeImpl editor (mkFn3 callback')
+            let args = runExcept $ { delta:_, oldContents:_, source:_ }
+                    <$> readOps a
+                    <*> readOps b
+                    <*> readSource c
+            case args of
+                Right { delta, oldContents, source } ->
+                    callback delta oldContents source
+                Left errs ->
+                    fallback errs
+
+    liftEff $ runFn2 onTextChangeImpl editor callback'
 
 foreign import onTextChangeImpl
-    :: forall a b c d eff
+    :: forall eff a
      . Fn2
-        Editor        -- self
-        (Fn3 a b c d) -- callback
+        Editor
+        (Foreign -> Foreign -> Foreign -> Eff eff a)
         (Eff (quill :: QUILL | eff) Unit)
 
 --------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#selection-change
 onSelectionChange
-    :: forall a eff
-     . (Range -> Range -> Source -> a)
+    :: forall eff a
+     . (Range -> Range -> Source -> Eff eff a)
+    -> (MultipleErrors -> Eff eff a)
     -> Editor
     -> API (quill :: QUILL | eff) Unit
-onSelectionChange callback editor = do
+onSelectionChange callback fallback editor = do
     let callback' a b c = do
-            range <- readRange a
-            oldRange <- readRange b
-            source <- readSource c
-            pure $ callback range oldRange source
-    void $ liftEff $ runFn2 onSelectionChangeImpl editor (mkFn3 callback')
+            let args = runExcept $ { range:_, oldRange:_, source:_ }
+                    <$> readRange a
+                    <*> readRange b
+                    <*> readSource c
+            case args of
+                Right { range, oldRange, source } ->
+                    callback range oldRange source
+                Left errs ->
+                    fallback errs
+    liftEff $ runFn2 onSelectionChangeImpl editor callback'
 
 foreign import onSelectionChangeImpl
-    :: forall a b c d eff
+    :: forall eff a
      . Fn2
-        Editor        -- self
-        (Fn3 a b c d) -- callback
+        Editor
+        (Foreign -> Foreign -> Foreign -> Eff eff a)
         (Eff (quill :: QUILL | eff) Unit)
+
+--------------------------------------------------------------------------------
+
+fallbackIgnore :: forall eff. MultipleErrors -> Eff eff Unit
+fallbackIgnore = const (pure unit)
 
