@@ -24,9 +24,9 @@ import Quill.Types (QUILL)
 --------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#text-change
 onTextChange
-    :: forall eff a
-     . (Ops -> Ops -> Source -> Eff eff a)
-    -> (MultipleErrors -> Eff eff a)
+    :: forall eff
+     . (Ops -> Ops -> Source -> Eff eff Unit)
+    -> (MultipleErrors -> Eff eff Unit)
     -> Editor
     -> API (quill :: QUILL | eff) Unit
 onTextChange callback fallback editor = do
@@ -44,18 +44,18 @@ onTextChange callback fallback editor = do
     liftEff $ runFn2 onTextChangeImpl editor callback'
 
 foreign import onTextChangeImpl
-    :: forall eff a
+    :: forall eff
      . Fn2
         Editor
-        (Foreign -> Foreign -> Foreign -> Eff eff a)
+        (Foreign -> Foreign -> Foreign -> Eff eff Unit)
         (Eff (quill :: QUILL | eff) Unit)
 
 --------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#selection-change
 onSelectionChange
-    :: forall eff a
-     . (Range -> Range -> Source -> Eff eff a)
-    -> (MultipleErrors -> Eff eff a)
+    :: forall eff
+     . (Range -> Range -> Source -> Eff eff Unit)
+    -> (MultipleErrors -> Eff eff Unit)
     -> Editor
     -> API (quill :: QUILL | eff) Unit
 onSelectionChange callback fallback editor = do
@@ -72,10 +72,10 @@ onSelectionChange callback fallback editor = do
     liftEff $ runFn2 onSelectionChangeImpl editor callback'
 
 foreign import onSelectionChangeImpl
-    :: forall eff a
+    :: forall eff
      . Fn2
         Editor
-        (Foreign -> Foreign -> Foreign -> Eff eff a)
+        (Foreign -> Foreign -> Foreign -> Eff eff Unit)
         (Eff (quill :: QUILL | eff) Unit)
 
 --------------------------------------------------------------------------------
