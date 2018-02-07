@@ -9,14 +9,14 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 
 import Data.Foreign (Foreign)
-import Data.Function.Uncurried (Fn3, runFn3)
+import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Options (Options, options)
 
 import DOM.HTML.Types (HTMLElement)
 
 import Quill.API.API (API)
 import Quill.Config (Config)
-import Quill.Types (QUILL, Quill)
+import Quill.Types (QUILL)
 
 --------------------------------------------------------------------------------
 -- | Initialise a Quill `Editor` on the given element.
@@ -26,15 +26,13 @@ editor
     -> HTMLElement
     -> API (quill :: QUILL | eff) Editor
 editor cfg el =
-    liftEff $ runFn3 editorImpl
-        quill
+    liftEff $ runFn2 editorImpl
         el
         (options cfg)
 
 foreign import editorImpl
     :: forall eff
-     . Fn3
-        Quill        -- quill
+     . Fn2
         HTMLElement  -- el
         Foreign      -- cfg
         (Eff (quill :: QUILL | eff) Editor)
@@ -44,6 +42,4 @@ foreign import editorImpl
 data Editor = Editor
 
 --------------------------------------------------------------------------------
-
-foreign import quill :: Quill  -- from quilljs
 

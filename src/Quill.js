@@ -1,10 +1,8 @@
 'use strict';
 
-exports.quill = Quill; // fail early if quilljs isn't available.
-
-exports.editorImpl = function(quill, el, config) {
+exports.editorImpl = function(el, config) {
     return function() {
-        var editor = new quill(el, config);
+        var editor = new Quill(el, config);
         return editor;
     };
 };
