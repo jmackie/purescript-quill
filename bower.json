@@ -4,7 +4,7 @@
     "authors": ["Jordan Mackie <jmackie@protonmail.com>"],
     "repository": {
         "type": "git",
-        "url": "git://github.com/jmackie4/purescript-quill.git"
+        "url": "git://github.com/jmackie/purescript-quill.git"
     },
     "ignore": [
         "**/.*",

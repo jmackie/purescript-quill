@@ -1,7 +1,7 @@
 # purescript-quill
 
 [![Pursuit version](https://pursuit.purescript.org/packages/purescript-quill/badge)][docs]
-[![Build status](https://travis-ci.org/jmackie4/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie4/purescript-quill)
+[![Build status](https://travis-ci.org/jmackie/purescript-quill.svg?branch=master)](https://travis-ci.org/jmackie/purescript-quill)
 
 <a href="http://purescript.org" title="Purescript">
     <img alt="Purescript Logo" src="img/purescript-logo.svg" height="120">
