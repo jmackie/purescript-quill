@@ -1,7 +1,7 @@
 {
     "private": true,
     "scripts": {
-        "clean": "rimraf output && rimraf .pulp-cache",
+        "clean": "rimraf output .pulp-cache",
         "build": "pulp build -- --censor-lib --strict",
         "example": "pulp build -O -I example/src --to example/dist/app.js"
     },
