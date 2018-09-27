@@ -3,143 +3,130 @@ module Main where
 import Prelude
 
 import Color as Color
-
-import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Except (runExcept)
-
-import Data.Array as A
-import Data.Either (Either(..), either)
-import Data.Foreign (MultipleErrors, toForeign, renderForeignError)
-import Data.Maybe (Maybe(..))
-import Data.Monoid (mempty)
-import Data.Options ((:=))
+import Control.Monad.Error.Class (class MonadError)
+import Control.Monad.Except.Trans (runExceptT)
+import Data.Either (Either(Left, Right))
+import Data.Foldable (fold, intercalate)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (wrap)
+import Data.Options (Options, (:=))
 import Data.String as S
-import Data.Tuple (Tuple(..))
-
-import DOM (DOM)
-import DOM.HTML (window)
-import DOM.HTML.Window (document)
-import DOM.Node.ParentNode (QuerySelector(..), querySelector)
-import DOM.Node.Types (Element)
-import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
-
-import Partial (crashWith)
-import Partial.Unsafe (unsafePartial)
-
-import Quill as Q
-import Quill.API (runAPI)
-import Quill.API as QAPI
-import Quill.API.Delta (Delta(..))
-import Quill.API.Formats as QFmt
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Console as Console
+import Effect.Exception as Exception
+import Foreign as Foreign
+import Quill.API.Content as QContent
+import Quill.API.Delta as QDelta
+import Quill.API.Events as QEvents
+import Quill.API.Formats as QFormats
+import Quill.API.Selection as QSelection
 import Quill.API.Source as QSource
-import Quill.Config as QCfg
-import Quill.Types (QUILL)
+import Quill.Config as QConfig
+import Quill.Editor as QEditor
+import Web.DOM.NonElementParentNode as NonElementParentNode
+import Web.HTML as HTML
+import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML.HTMLElement (HTMLElement)
+import Web.HTML.HTMLElement as HTMLElement
+import Web.HTML.Window as Window
 
-main :: forall e. Eff (console :: CONSOLE, dom :: DOM, quill :: QUILL | e) Unit
+
+main :: Effect Unit
 main = do
-    target <- window
-            >>= document
-            >>= (htmlDocumentToParentNode
-                >>> querySelector (QuerySelector "#editor"))
-            <#> (_ >>= elementToHTMLElement)
-    result <- runAPI $ case target of
-        Nothing ->
-            unsafePartial $ crashWith "editor element not found!"
-        Just el -> do
-            -- Initialise the editor
-            let cfg = QCfg.debug       := QCfg.DebugWarn
-                   <> QCfg.theme       := QCfg.SnowTheme
-                   <> QCfg.placeholder := "Write here!"
-                   <> QCfg.formats     :=
-                        [ QCfg.allow QFmt.bold
-                        , QCfg.allow QFmt.italic
-                        , QCfg.allow QFmt.underline
-                        , QCfg.allow QFmt.header
-                        , QCfg.allow QFmt.align
-                        , QCfg.allow QFmt.color
-                        ]
-            editor <- Q.editor cfg el
-
-            -- Set some initial content
-            void $ QAPI.setContents
-                        [ Insert (Right "purescript-quill example\n") $
-                            QFmt.header := 1 <>
-                            QFmt.align  := QFmt.Center <>
-                            QFmt.color  := Color.fromInt 0xff0000
-                        , Insert (Right "Hello World!") $
-                            QFmt.italic := true
-                        , Insert (Right "\n") mempty
-                        ]
-                        QSource.API
-                        editor
-
-            -- Update initial content
-            void $ QAPI.updateContents
-                        [ Retain (S.length "purescript-quill example\n") $
-                            mempty
-                        , Retain (S.length "Hello World") $
-                            QFmt.italic := true
-                        , Insert (Right " ") mempty
-                        , Delete 1
-                        , Insert (Right "?!") mempty
-                        , Insert (Right "\n") mempty
-                        ]
-                        QSource.API
-                        editor
-
-            -- Insert a raw string at the end of the editor
-            void $ QAPI.getLength editor >>= \len ->
-                   QAPI.insertText
-                        len
-                        "I was inserted"
-                        mempty
-                        QSource.API
-                        editor
-
-            -- Get the editors current text
-            text <- QAPI.getText
-                        0
-                        Nothing -- use default
-                        editor
-            liftEff $ log text
-
-            -- Select everything
-            void $ QAPI.getLength editor >>= \len ->
-                   QAPI.setSelection
-                        (Tuple 0 len)
-                        QSource.API
-                        editor
-
-            -- Register callbacks
-            QAPI.onTextChange
-                    (\_ _ _ -> log $ "callback: text-change")
-                    (\errs  -> log $ "fallback: errors: " <> renderMultipleErrors errs)
-                    editor
-
-            QAPI.onSelectionChange
-                    (\_ _ _ -> log $ "callback: selection-change")
-                    QAPI.fallbackIgnore
-                    editor
-
-            pure unit
-
+    target <- getHTMLElementById "editor" >>= maybe (Exception.throw "no #editor element") pure
+    result <- runExceptT (run target)
     case result of
-        Left errs ->
-            unsafePartial $ crashWith $ "API call failed: " <> renderMultipleErrors errs
-        Right _ ->
-            pure unit
+         Right _ -> pure unit
+         Left errors -> Exception.throw (renderMultipleErrors errors)
 
-    pure unit
 
-elementToHTMLElement :: Element -> Maybe HTMLElement
-elementToHTMLElement =
-        toForeign
-    >>> readHTMLElement
-    >>> runExcept
-    >>> either (const Nothing) Just
+run :: forall m. MonadEffect m => MonadError Foreign.MultipleErrors m => HTMLElement -> m Unit
+run element = do
+    -- Initialise the editor
+    editor <- QEditor.new editorConfig element
 
-renderMultipleErrors :: MultipleErrors -> String
-renderMultipleErrors = S.joinWith ", " <<< A.fromFoldable <<< map renderForeignError
+    -- Set some initial content
+    let initialContent :: QDelta.Ops
+        initialContent = wrap
+            [ QDelta.Insert (Right "purescript-quill example\n") $
+                QFormats.header := 1 <>
+                QFormats.align  := QFormats.Center <>
+                QFormats.color  := Color.fromInt 0xff0000
+            , QDelta.Insert (Right "Hello World!") $
+                QFormats.italic := true
+            , QDelta.Insert (Right "\n")
+                mempty
+            ]
 
+    _ <- QContent.setContents initialContent QSource.API editor
+
+    -- Update initial content
+    let updatedContent :: QDelta.Ops
+        updatedContent = wrap
+            [ QDelta.Retain (S.length "purescript-quill example\n") $
+                mempty
+            , QDelta.Retain (S.length "Hello World") $
+                QFormats.italic := true
+            , QDelta.Insert (Right " ")
+                mempty
+            , QDelta.Delete 1
+            , QDelta.Insert (Right "?!")
+                mempty
+            , QDelta.Insert (Right "\n")
+                mempty
+            ]
+
+    _ <- QContent.updateContents updatedContent QSource.API editor
+
+    -- Insert a raw string at the end of the editor
+    len <- QContent.getLength editor
+    _   <- QContent.insertText len "I was inserted" mempty QSource.API editor
+
+    -- Get the editors current text
+    text <- QContent.getText { index: 0, length: Nothing } editor
+    liftEffect (Console.log text)
+
+    -- Select everything
+    len' <- QContent.getLength editor
+    QSelection.setSelection { index: 0, length: wrap len' } QSource.API editor
+
+    -- Register callbacks
+    QEvents.onTextChange
+        (\_ _ _ -> Console.log   "callback: text-change")
+        (\errs  -> Console.log $ "fallback: errors: " <> renderMultipleErrors errs)
+        editor
+
+    QEvents.onSelectionChange
+        (\_ _ _ -> Console.log "callback: selection-change")
+        QEvents.fallbackIgnore
+        editor
+
+
+editorConfig :: Options QConfig.Config
+editorConfig = fold
+    [ QConfig.debug       := QConfig.DebugWarn
+    , QConfig.theme       := QConfig.SnowTheme
+    , QConfig.placeholder := "Write here!"
+    , QConfig.formats     :=
+        [ QConfig.allow QFormats.bold
+        , QConfig.allow QFormats.italic
+        , QConfig.allow QFormats.underline
+        , QConfig.allow QFormats.header
+        , QConfig.allow QFormats.align
+        , QConfig.allow QFormats.color
+        ]
+    ]
+
+
+getHTMLElementById :: String -> Effect (Maybe HTMLElement)
+getHTMLElementById id =
+    HTML.window >>=
+    Window.document >>=
+    HTMLDocument.toNonElementParentNode >>>
+    NonElementParentNode.getElementById id >>>
+    map (_ >>= HTMLElement.fromElement)
+
+
+renderMultipleErrors :: Foreign.MultipleErrors -> String
+renderMultipleErrors = intercalate ", " <<< map Foreign.renderForeignError

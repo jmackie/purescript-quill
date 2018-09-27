@@ -1,36 +1,35 @@
 module Quill.API.Range
-    ( Range(..)
-    , Index
-    , Length
-    , mkRange
-    , readRange
-    , index
-    , length
-    ) where
+    ( Range
+    , decodeOpenRange
+    , decodeClosedRange
+    )
+where
 
 import Prelude
 
-import Data.Foreign (Foreign, F, readInt)
-import Data.Foreign.Index ((!))
-import Data.Tuple (Tuple(..), fst, snd)
+import Control.Monad.Error.Class (try)
+import Data.Either (Either(Left, Right))
+import Data.Identity (Identity)
+import Data.Maybe (Maybe(Just, Nothing))
+import Data.Newtype (wrap)
+import Foreign (Foreign, F)
+import Foreign (readInt) as Foreign
+import Foreign.Index (readProp) as Foreign
 
-type Range = Tuple Index Length
 
-mkRange :: Index -> Length -> Range
-mkRange = Tuple
+type Range f = { index :: Int, length :: f Int }
 
-readRange :: Foreign -> F Range
-readRange value = Tuple
-    <$> (value ! "index"  >>= readInt)
-    <*> (value ! "length" >>= readInt)
 
-type Index = Int
+decodeOpenRange :: Foreign -> F (Range Maybe)
+decodeOpenRange value = do
+    index  <- Foreign.readProp "index"  value >>= Foreign.readInt
+    try (Foreign.readProp "length" value) >>= case _ of
+        Left _       -> pure { index, length: Nothing }
+        Right length -> { index, length:_ } <<< Just <$> Foreign.readInt length
 
-index :: Range -> Index
-index = fst
 
-type Length = Int
-
-length :: Range -> Length
-length = snd
-
+decodeClosedRange :: Foreign -> F (Range Identity)
+decodeClosedRange value = do
+    index  <- Foreign.readProp "index"  value >>= Foreign.readInt
+    length <- Foreign.readProp "length" value >>= Foreign.readInt
+    pure { index, length: wrap length }

@@ -11,3 +11,4 @@ package-lock.json
 /dist/app.js
 /package-lock.json
 /example/dist/app.js
+tags*

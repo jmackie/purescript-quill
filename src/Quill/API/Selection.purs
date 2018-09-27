@@ -1,107 +1,105 @@
 module Quill.API.Selection
     ( getBounds
+    , Bounds
     , getSelection
     , setSelection
-    ) where
+    )
+where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-
-import Data.Foreign (Foreign, F, readNumber)
-import Data.Foreign.Index ((!))
-import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3, Fn4, runFn4)
+import Control.Monad.Error.Class (class MonadError, throwError)
+import Control.Monad.Except (runExcept)
+import Data.Either (either)
+import Data.Identity (Identity)
 import Data.Maybe (Maybe, fromMaybe)
-
-import Quill (Editor)
-import Quill.API.API (API, handleReturn)
-import Quill.API.Range (Range, Index, Length, readRange, index, length)
+import Data.Newtype (unwrap)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Uncurried as UncurriedEffect
+import Foreign (Foreign, F)
+import Foreign (MultipleErrors, readNumber) as Foreign
+import Foreign.Index (readProp) as Foreign
+import Quill.API.Range (Range, decodeClosedRange)
 import Quill.API.Source (Source)
-import Quill.Types (QUILL)
+import Quill.Editor (Editor)
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#getbounds
 getBounds
-    :: forall eff
-     . Index
-    -> DefaultArg Length
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Maybe
     -> Editor
-    -> API (quill :: QUILL | eff) Bounds
-getBounds index length editor =
-    handleReturn readBounds <=< liftEff $
-        runFn3 getBoundsImpl
-            editor
-            index
-            (fromMaybe 0 length)
-    where
-        readBounds :: Foreign -> F Bounds
-        readBounds value = { left:_, top:_, height:_, width:_ }
-            <$> (value ! "left"   >>= readNumber)
-            <*> (value ! "top"    >>= readNumber)
-            <*> (value ! "height" >>= readNumber)
-            <*> (value ! "width"  >>= readNumber)
+    -> m Bounds
+getBounds { index, length } editor =
+    either throwError pure <<< runExcept <<< decodeBounds <=< liftEffect $
+    UncurriedEffect.runEffectFn3 getBoundsImpl
+        editor index (fromMaybe 0 length)
+
 
 foreign import getBoundsImpl
-    :: forall eff
-     . Fn3
-        Editor -- self
-        Index  -- index
-        Length -- length
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn3
+            Editor
+            Int  -- index
+            Int  -- length
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#getselection
 getSelection
-    :: forall eff
-     . Boolean
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Boolean
     -> Editor
-    -> API (quill :: QUILL | eff) Range
+    -> m (Range Identity)
 getSelection focus editor =
-    handleReturn readRange <=< liftEff $
-        runFn2 getSelectionImpl
-            editor
-            focus
+    either throwError pure <<< runExcept <<< decodeClosedRange <=< liftEffect $
+    UncurriedEffect.runEffectFn2 getSelectionImpl
+        editor focus
 
 foreign import getSelectionImpl
-    :: forall eff
-     . Fn2
-        Editor  -- self
-        Boolean -- focus
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn2
+            Editor
+            Boolean -- focus
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#setselection
 setSelection
-    :: forall eff
-     . Range
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Identity
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Unit
-setSelection range source editor =
-    void <<< liftEff $
-        runFn4 setSelectionImpl
-            editor
-            (index range)
-            (length range)
-            (show source)
+    -> m Unit
+setSelection { index, length } source editor =
+    liftEffect $ UncurriedEffect.runEffectFn4 setSelectionImpl
+        editor index (unwrap length) (show source)
 
 foreign import setSelectionImpl
-    :: forall eff
-     . Fn4
-        Editor -- self
-        Index  -- index
-        Length -- length
-        String -- source
-        (Eff (quill :: QUILL | eff) Unit)
+    :: UncurriedEffect.EffectFn4
+            Editor
+            Int    -- index
+            Int    -- length
+            String -- source
+            Unit
 
---------------------------------------------------------------------------------
 
-type DefaultArg = Maybe
+type Bounds =
+    { left   :: Number
+    , top    :: Number
+    , height :: Number
+    , width  :: Number
+    }
 
-type Bounds = { left   :: Number
-              , top    :: Number
-              , height :: Number
-              , width  :: Number
-              }
 
+decodeBounds :: Foreign -> F Bounds
+decodeBounds value =  do
+    left   <- Foreign.readProp "left"   value >>= Foreign.readNumber
+    top    <- Foreign.readProp "top"    value >>= Foreign.readNumber
+    height <- Foreign.readProp "height" value >>= Foreign.readNumber
+    width  <- Foreign.readProp "width"  value >>= Foreign.readNumber
+    pure { left, top, height, width }

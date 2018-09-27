@@ -1,37 +1,30 @@
 'use strict';
 
 exports.blurImpl = function(self) {
-    return function() {
-        self.blur();
-    };
+    self.blur();
+    return {};
 };
 
 exports.disableImpl = function(self) {
-    return function() {
-        self.enable(false);
-    };
+    self.enable(false);
+    return {};
 };
 
 exports.enableImpl = function(self, enabled) {
-    return function() {
-        self.enable(enabled);
-    };
+    self.enable(enabled);
+    return {};
 };
 
 exports.focusImpl = function(self) {
-    return function() {
-        self.focus();
-    };
+    self.focus();
+    return {};
 };
 
 exports.hasFocusImpl = function(self) {
-    return function() {
-        return self.hasFocus();
-    };
+    return self.hasFocus();
 };
 
 exports.updateImpl = function(self, source) {
-    return function() {
-        self.update(source);
-    };
+    self.update(source);
+    return {};
 };

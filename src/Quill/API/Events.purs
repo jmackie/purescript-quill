@@ -6,80 +6,84 @@ module Quill.API.Events
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Except (runExcept)
+import Data.Either (Either(Left, Right))
+import Data.Identity (Identity)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Uncurried as UncurriedEffect
+import Foreign (Foreign)
+import Foreign (MultipleErrors) as Foreign
+import Foreign.Class (decode) as Foreign
+import Quill.API.Delta (Ops)
+import Quill.API.Range (Range, decodeClosedRange)
+import Quill.API.Source (Source)
+import Quill.Editor (Editor)
 
-import Data.Either (Either(..))
-import Data.Foreign (Foreign, MultipleErrors)
-import Data.Function.Uncurried (Fn2, runFn2)
 
-import Quill (Editor)
-import Quill.API.API (API)
-import Quill.API.Delta (Ops, readOps)
-import Quill.API.Range (Range, readRange)
-import Quill.API.Source (Source, readSource)
-import Quill.Types (QUILL)
-
---------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#text-change
 onTextChange
-    :: forall eff
-     . (Ops -> Ops -> Source -> Eff eff Unit)
-    -> (MultipleErrors -> Eff eff Unit)
+    :: forall m
+     . MonadEffect m
+    => (Ops -> Ops -> Source -> Effect Unit)
+    -> (Foreign.MultipleErrors -> Effect Unit)
     -> Editor
-    -> API (quill :: QUILL | eff) Unit
-onTextChange callback fallback editor = do
-    let callback' a b c = do
-            let args = runExcept $ { delta:_, oldContents:_, source:_ }
-                    <$> readOps a
-                    <*> readOps b
-                    <*> readSource c
-            case args of
-                Right { delta, oldContents, source } ->
-                    callback delta oldContents source
-                Left errs ->
-                    fallback errs
-
-    liftEff $ runFn2 onTextChangeImpl editor callback'
+    -> m Unit
+onTextChange callback fallback editor =
+    liftEffect (UncurriedEffect.runEffectFn2 onTextChangeImpl editor callback')
+  where
+    callback' :: Foreign -> Foreign -> Foreign -> Effect Unit
+    callback' a b c =
+        let args = runExcept do
+                    delta       <- Foreign.decode a
+                    oldContents <- Foreign.decode b
+                    source      <- Foreign.decode c
+                    pure { delta, oldContents, source }
+        in
+        case args of
+             Right { delta, oldContents, source } ->
+                callback delta oldContents source
+             Left errs ->
+                fallback errs
 
 foreign import onTextChangeImpl
-    :: forall eff
-     . Fn2
-        Editor
-        (Foreign -> Foreign -> Foreign -> Eff eff Unit)
-        (Eff (quill :: QUILL | eff) Unit)
+    :: UncurriedEffect.EffectFn2
+            Editor
+            (Foreign -> Foreign -> Foreign -> Effect Unit)
+            Unit
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#selection-change
 onSelectionChange
-    :: forall eff
-     . (Range -> Range -> Source -> Eff eff Unit)
-    -> (MultipleErrors -> Eff eff Unit)
+    :: forall m
+     . MonadEffect m
+    => (Range Identity -> Range Identity -> Source -> Effect Unit)
+    -> (Foreign.MultipleErrors -> Effect Unit)
     -> Editor
-    -> API (quill :: QUILL | eff) Unit
+    -> m Unit
 onSelectionChange callback fallback editor = do
-    let callback' a b c = do
-            let args = runExcept $ { range:_, oldRange:_, source:_ }
-                    <$> readRange a
-                    <*> readRange b
-                    <*> readSource c
-            case args of
-                Right { range, oldRange, source } ->
-                    callback range oldRange source
-                Left errs ->
-                    fallback errs
-    liftEff $ runFn2 onSelectionChangeImpl editor callback'
+    liftEffect (UncurriedEffect.runEffectFn2 onSelectionChangeImpl editor callback')
+  where
+    callback' :: (Foreign -> Foreign -> Foreign -> Effect Unit)
+    callback' a b c =
+        let args = runExcept do
+                    range    <- decodeClosedRange a
+                    oldRange <- decodeClosedRange b
+                    source   <- Foreign.decode c
+                    pure { range, oldRange, source }
+        in
+        case args of
+             Right { range, oldRange, source } ->
+                callback range oldRange source
+             Left errs ->
+                fallback errs
 
 foreign import onSelectionChangeImpl
-    :: forall eff
-     . Fn2
-        Editor
-        (Foreign -> Foreign -> Foreign -> Eff eff Unit)
-        (Eff (quill :: QUILL | eff) Unit)
+    :: UncurriedEffect.EffectFn2
+            Editor
+            (Foreign -> Foreign -> Foreign -> Effect Unit)
+            Unit
 
---------------------------------------------------------------------------------
 
-fallbackIgnore :: forall eff. MultipleErrors -> Eff eff Unit
+fallbackIgnore :: Foreign.MultipleErrors -> Effect Unit
 fallbackIgnore = const (pure unit)
-

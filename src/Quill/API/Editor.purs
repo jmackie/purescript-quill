@@ -5,132 +5,69 @@ module Quill.API.Editor
     , focus
     , hasFocus
     , update
-    ) where
+    )
+where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-
-import Data.Foreign (Foreign, readBoolean)
-import Data.Function.Uncurried (Fn1, runFn1, Fn2, runFn2)
-import Data.Maybe (Maybe)
-
-import Quill (Editor)
-import Quill.API.API (API, handleReturn)
+import Control.Monad.Error.Class (class MonadError, throwError)
+import Control.Monad.Except (runExcept)
+import Data.Either (either)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Uncurried as UncurriedEffect
+import Foreign (Foreign)
+import Foreign (MultipleErrors, readBoolean) as Foreign
 import Quill.API.Source (Source)
-import Quill.Types (QUILL)
+import Quill.Editor (Editor)
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#blur
-blur
-    :: forall eff
-     . Editor
-    -> API (quill :: QUILL | eff) Unit
-blur editor =
-    void <<< liftEff $
-        runFn1 blurImpl
-            editor
+blur :: forall m. MonadEffect m => Editor -> m Unit
+blur editor = liftEffect (UncurriedEffect.runEffectFn1 blurImpl editor)
 
-foreign import blurImpl
-    :: forall eff
-     . Fn1
-        Editor -- self
-        (Eff (quill :: QUILL | eff) Unit)
+foreign import blurImpl :: UncurriedEffect.EffectFn1 Editor Unit
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#disable
-disable
-    :: forall eff
-     . Editor
-    -> API (quill :: QUILL | eff) Unit
-disable editor =
-    void <<< liftEff $
-        runFn1 disableImpl
-            editor
+disable :: forall m. MonadEffect m => Editor -> m Unit
+disable editor = liftEffect (UncurriedEffect.runEffectFn1 disableImpl editor)
 
-foreign import disableImpl
-    :: forall eff
-     . Fn1
-        Editor -- self
-        (Eff (quill :: QUILL | eff) Unit)
+foreign import disableImpl :: UncurriedEffect.EffectFn1 Editor Unit
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#enable
-enable
-    :: forall eff
-     . Boolean
-    -> Editor
-    -> API (quill :: QUILL | eff) Unit
+enable :: forall m. MonadEffect m => Boolean -> Editor -> m Unit
 enable enabled editor =
-    void <<< liftEff $
-        runFn2 enableImpl
-            editor
-            enabled
+    liftEffect (UncurriedEffect.runEffectFn2 enableImpl editor enabled)
 
-foreign import enableImpl
-    :: forall eff
-     . Fn2
-        Editor  -- self
-        Boolean -- enabled
-        (Eff (quill :: QUILL | eff) Unit)
+foreign import enableImpl :: UncurriedEffect.EffectFn2 Editor Boolean Unit
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#focus
-focus
-    :: forall eff
-     . Editor
-    -> API (quill :: QUILL | eff) Unit
-focus editor =
-    void <<< liftEff $
-        runFn1 focusImpl
-            editor
+focus :: forall m. MonadEffect m => Editor -> m Unit
+focus editor = liftEffect (UncurriedEffect.runEffectFn1 focusImpl editor)
 
-foreign import focusImpl
-    :: forall eff
-     . Fn1
-        Editor -- self
-        (Eff (quill :: QUILL | eff) Unit)
+foreign import focusImpl :: UncurriedEffect.EffectFn1 Editor Unit
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#hasfocus
 hasFocus
-    :: forall eff
-     . Editor
-    -> API (quill :: QUILL | eff) Boolean
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Editor
+    -> m Boolean
 hasFocus editor =
-    handleReturn readBoolean <=< liftEff $
-        runFn1 hasFocusImpl
-            editor
+    either throwError pure <<< runExcept <<< Foreign.readBoolean <=< liftEffect $
+    UncurriedEffect.runEffectFn1 hasFocusImpl
+        editor
 
-foreign import hasFocusImpl
-    :: forall eff
-     . Fn1
-        Editor -- self
-        (Eff (quill :: QUILL | eff) Foreign)
+foreign import hasFocusImpl :: UncurriedEffect.EffectFn1 Editor Foreign
 
 
---------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#update
-update
-    :: forall eff
-     . Source
-    -> Editor
-    -> Eff (quill :: QUILL | eff) Unit
+update :: forall m. MonadEffect m => Source -> Editor -> m Unit
 update source editor =
-    void <<< liftEff $
-        runFn2 updateImpl
-            editor
-            (show source)
+    liftEffect (UncurriedEffect.runEffectFn2 updateImpl editor (show source))
 
-foreign import updateImpl
-    :: forall eff
-     . Fn2
-        Editor -- self
-        String -- source
-        (Eff (quill :: QUILL | eff) Unit)
-
---------------------------------------------------------------------------------
-
-type DefaultArg = Maybe
-
+foreign import updateImpl :: UncurriedEffect.EffectFn2 Editor String Unit

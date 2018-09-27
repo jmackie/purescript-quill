@@ -1,4 +1,8 @@
-module Quill.API.Debug (Debug(..)) where
+module Quill.API.Debug
+    ( Debug(..)
+    )
+where
+
 
 -- | https://quilljs.com/docs/api/#debug
 data Debug

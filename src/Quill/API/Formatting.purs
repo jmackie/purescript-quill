@@ -7,129 +7,116 @@ module Quill.API.Formatting
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-
-import Data.Foreign (Foreign)
-import Data.Function.Uncurried (Fn4, runFn4, Fn5, runFn5)
-import Data.Maybe (Maybe)
+import Control.Monad.Error.Class (class MonadError, throwError)
+import Control.Monad.Except (runExcept)
+import Data.Either (either)
+import Data.Identity (Identity)
+import Data.Newtype (unwrap)
 import Data.Options (Options, options)
-
-import Quill (Editor)
-import Quill.API.API (API, handleReturn)
-import Quill.API.Delta (Ops, readOps)
-import Quill.API.Formats (Formats, SingleFormat, name, value)
-import Quill.API.Range (Range, Index, Length, index, length)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Uncurried as UncurriedEffect
+import Foreign (Foreign)
+import Foreign (MultipleErrors) as Foreign
+import Foreign.Class (decode) as Foreign
+import Quill.API.Delta (Ops)
+import Quill.API.Formats (Formats, SingleFormat)
+import Quill.API.Formats as Formats
+import Quill.API.Range (Range)
 import Quill.API.Source (Source)
-import Quill.Types (QUILL)
+import Quill.Editor (Editor)
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#format
 format
-    :: forall eff
-     . SingleFormat
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => SingleFormat
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
+    -> m Ops
 format fmt source editor =
-    handleReturn readOps <=< liftEff $
-        runFn4 formatImpl
-            editor
-            (name fmt)
-            (value fmt)
-            (show source)
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn4 formatImpl
+        editor (Formats.name fmt) (Formats.value fmt) (show source)
 
 foreign import formatImpl
-    :: forall eff
-     . Fn4
-        Editor  -- self
-        String  -- name
-        Foreign -- value
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn4
+            Editor
+            String  -- name
+            Foreign -- value
+            String  -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#formatline
 formatLine
-    :: forall eff
-     . Range
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Identity
     -> Options Formats
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-formatLine range formats source editor =
-    handleReturn readOps <=< liftEff $
-        runFn5 formatLineImpl
-            editor
-            (index range)
-            (length range)
-            (options formats)
-            (show source)
+    -> m Ops
+formatLine { index, length } formats source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn5 formatLineImpl
+        editor index (unwrap length ) (options formats) (show source)
 
 foreign import formatLineImpl
-    :: forall eff
-     . Fn5
-        Editor  -- self
-        Index   -- index
-        Length  -- length
-        Foreign -- formats
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn5
+            Editor
+            Int     -- index
+            Int     -- length
+            Foreign -- formats
+            String  -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#formattext
 formatText
-    :: forall eff
-     . Range
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Identity
     -> Options Formats
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-formatText range formats source editor =
-    handleReturn readOps <=< liftEff $
-        runFn5 formatTextImpl
-            editor
-            (index range)
-            (length range)
-            (options formats)
-            (show source)
+    -> m Ops
+formatText { index, length } formats source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn5 formatTextImpl
+        editor index (unwrap length) (options formats) (show source)
 
 foreign import formatTextImpl
-    :: forall eff
-     . Fn5
-        Editor  -- self
-        Index   -- index
-        Length  -- length
-        Foreign -- formats
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn5
+            Editor
+            Int     -- index
+            Int     -- length
+            Foreign -- formats
+            String  -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#removeformat
 removeFormat
-    :: forall eff
-     . Range
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Identity
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-removeFormat range source editor =
-    handleReturn readOps <=< liftEff $
-        runFn4 removeFormatImpl
-            editor
-            (index range)
-            (length range)
-            (show source)
+    -> m Ops
+removeFormat { index, length } source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn4 removeFormatImpl
+        editor index (unwrap length) (show source)
 
 foreign import removeFormatImpl
-    :: forall eff
-     . Fn4
-        Editor  -- self
-        Index   -- index
-        Length  -- length
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
-
---------------------------------------------------------------------------------
-
-type DefaultArg = Maybe
-
+    :: UncurriedEffect.EffectFn4
+            Editor
+            Int     -- index
+            Int     -- length
+            String  -- source
+            Foreign

@@ -1,15 +1,16 @@
 module Quill.API.Source
-    ( Source(..)
-    , readSource
-    ) where
+    ( Source(User, API, Silent)
+    )
+where
 
 import Prelude
 
-import Control.Monad.Except.Trans (except)
+import Control.Monad.Error.Class (throwError)
+import Data.List.NonEmpty as NonEmptyList
+import Foreign (Foreign, ForeignError(ForeignError), F)
+import Foreign (readString) as Foreign
+import Foreign.Class (class Decode) as Foreign
 
-import Data.Either (Either(..))
-import Data.Foreign (Foreign, ForeignError(..), F, readString)
-import Data.List.NonEmpty (singleton)
 
 -- | NOTE: Calls where the source is "user" when the editor is disabled are ignored.
 data Source
@@ -22,11 +23,13 @@ instance showSource :: Show Source where
     show API    = "api"
     show Silent = "silent"
 
-readSource :: Foreign -> F Source
-readSource value =
-    readString value >>= (case _ of
-        "user"   -> pure User
-        "api"    -> pure API
-        "silent" -> pure Silent
-        nope -> except $ Left $ singleton $
-            ForeignError ("unrecognised source: " <> nope))
+instance foreignDecodeSource :: Foreign.Decode Source where decode = decodeSource
+
+
+decodeSource :: Foreign -> F Source
+decodeSource = Foreign.readString >=> case _ of
+    "user"   -> pure User
+    "api"    -> pure API
+    "silent" -> pure Silent
+    other    -> throwError <<< NonEmptyList.singleton <<< ForeignError $
+                "unrecognised source: " <> other

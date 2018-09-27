@@ -1,17 +1,15 @@
 'use strict';
 
 exports.onTextChangeImpl = function(self, callback) {
-    return function() {
-        self.on('text-change', function(delta, oldContents, source) {
-            callback(delta)(oldContents)(source)();
-        });
-    };
+    self.on('text-change', function(delta, oldContents, source) {
+        callback(delta)(oldContents)(source)();
+    });
+    return {};
 };
 
 exports.onSelectionChangeImpl = function(self, callback) {
-    return function() {
-        self.on('selection-change', function(range, oldRange, source) {
-            callback(range)(oldRange)(source)();
-        });
-    };
+    self.on('selection-change', function(range, oldRange, source) {
+        callback(range)(oldRange)(source)();
+    });
+    return {};
 };

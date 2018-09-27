@@ -1,13 +1,15 @@
 module Quill.API.Embed
-    ( Embed(..)
+    ( Embed(Image, Video)
     , URL
-    ) where
+    )
+where
+
 
 -- | Embed an external resource.
 data Embed
     = Image URL
     | Video URL
 
+
 -- | For clarity.
 type URL = String
-

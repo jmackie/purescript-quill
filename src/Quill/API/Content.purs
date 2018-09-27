@@ -8,258 +8,230 @@ module Quill.API.Content
     , setContents
     , setText
     , updateContents
-    ) where
+    )
+where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-
-import Data.Function.Uncurried (Fn1, runFn1, Fn3, runFn3,
-                                Fn4, runFn4, Fn5, runFn5)
-
-import Data.Foreign (Foreign, readString, readInt)
-import Data.Maybe (Maybe, fromMaybe)
+import Control.Monad.Error.Class (class MonadError, throwError)
+import Control.Monad.Except (runExcept)
+import Data.Either (either)
+import Data.Identity (Identity)
+import Data.Maybe (Maybe)
+import Data.Newtype (unwrap)
 import Data.Options (Options, options)
-
-import Quill (Editor)
-import Quill.API.API (API, handleReturn)
-import Quill.API.Delta (Ops, readOps, opsToForeign)
-import Quill.API.Embed (Embed(..))
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Uncurried as UncurriedEffect
+import Foreign (Foreign)
+import Foreign (MultipleErrors, readInt, readString) as Foreign
+import Foreign.Class (encode, decode) as Foreign
+import Quill.API.Delta (Ops)
+import Quill.API.Embed (Embed(Image, Video))
 import Quill.API.Formats (Formats)
-import Quill.API.Range (Range, Index, Length, index, length)
+import Quill.API.Range (Range)
 import Quill.API.Source (Source)
-import Quill.Types (QUILL)
+import Quill.Editor (Editor)
 
-import Unsafe.Coerce (unsafeCoerce)
 
---------------------------------------------------------------------------------
 -- | https://quilljs.com/docs/api/#deletetext
 deleteText
-    :: forall eff
-     . Range
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Identity
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-deleteText range source editor =
-    handleReturn readOps <=< liftEff $
-        runFn4 deleteTextImpl
-            editor
-            (index range)
-            (length range)
-            (show source)
+    -> m Ops
+deleteText { index, length } source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn4 deleteTextImpl
+        editor index (unwrap length) (show source)
 
 foreign import deleteTextImpl
-    :: forall eff
-     . Fn4
-        Editor -- self
-        Index  -- index
-        Length -- length
-        String -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn4
+            Editor
+            Int    -- index
+            Int    -- length
+            String -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#getcontents
 getContents
-    :: forall eff
-     . Index
-    -> DefaultArg Length
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Maybe
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-getContents index length editor =
-    handleReturn readOps <=< liftEff $
-        runFn3 getContentsImpl
-            editor
-            index
-            (fromMaybe (unsafeCoerce undefined) length)
+    -> m Ops
+getContents { index, length } editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn3 getContentsImpl
+        editor index (Foreign.encode length)
 
 foreign import getContentsImpl
-    :: forall eff
-     . Fn3
-        Editor -- self
-        Index  -- index
-        Length -- length
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn3
+            Editor
+            Int     -- index
+            Foreign -- length
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#getlength
 getLength
-    :: forall eff
-     . Editor
-    -> API (quill :: QUILL | eff) Int
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Editor
+    -> m Int
 getLength editor =
-    handleReturn readInt <=< liftEff $
-        runFn1 getLengthImpl
-            editor
+    either throwError pure <<< runExcept <<< Foreign.readInt <=< liftEffect $
+    UncurriedEffect.runEffectFn1 getLengthImpl
+        editor
 
 foreign import getLengthImpl
-    :: forall eff
-     . Fn1
-        Editor -- self
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn1
+            Editor
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#gettext
 getText
-    :: forall eff
-     . Index
-    -> DefaultArg Length
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Range Maybe
     -> Editor
-    -> API (quill :: QUILL | eff) String
-getText index length editor =
-    handleReturn readString <=< liftEff $
-        runFn3 getTextImpl
-            editor
-            index
-            (fromMaybe (unsafeCoerce undefined) length)
+    -> m String
+getText { index, length } editor =
+    either throwError pure <<< runExcept <<< Foreign.readString <=< liftEffect $
+    UncurriedEffect.runEffectFn3 getTextImpl
+        editor index (Foreign.encode length)
 
 foreign import getTextImpl
-    :: forall eff
-     . Fn3
-        Editor -- self
-        Index  -- index
-        Length -- length
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn3
+            Editor
+            Int     -- index
+            Foreign -- length
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#insertembed
 insertEmbed
-    :: forall eff
-     . Index
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Int
     -> Embed
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-
-insertEmbed index (Image url) source self =
-    handleReturn readOps <=< liftEff $
-        runFn5 insertEmbedImpl
-            self
-            index
-            "image"
-            url
-            (show source)
-
-insertEmbed index (Video url) source self =
-    handleReturn readOps <=< liftEff $
-        runFn5 insertEmbedImpl
-            self
-            index
-            "video"
-            url
-            (show source)
+    -> m Ops
+insertEmbed index (Image url) source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn5 insertEmbedImpl
+        editor index "image" url (show source)
+insertEmbed index (Video url) source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn5 insertEmbedImpl
+        editor index "video" url (show source)
 
 foreign import insertEmbedImpl
-    :: forall eff
-     . Fn5
-        Editor -- self
-        Index  -- index
-        String -- type
-        String -- value
-        String -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn5
+            Editor
+            Int    -- index
+            String -- type
+            String -- value
+            String -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#inserttext
 insertText
-    :: forall eff
-     . Index
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Int
     -> String
     -> Options Formats
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-insertText index text formats source self =
-    handleReturn readOps <=< liftEff $
-        runFn5 insertTextImpl
-            self
-            index
-            text
-            (options formats)
-            (show source)
+    -> m Ops
+insertText index text formats source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn5 insertTextImpl
+        editor index text (options formats) (show source)
 
 foreign import insertTextImpl
-    :: forall eff
-     . Fn5
-        Editor  -- self
-        Index   -- index
-        String  -- text
-        Foreign -- formats
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn5
+            Editor
+            Int     -- index
+            String  -- text
+            Foreign -- formats
+            String  -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#setcontents
 setContents
-    :: forall eff
-     . Ops
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Ops
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-setContents ops source self =
-    handleReturn readOps <=< liftEff $
-        runFn3 setContentsImpl
-            self
-            (opsToForeign ops)
-            (show source)
+    -> m Ops
+setContents ops source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn3 setContentsImpl
+        editor (Foreign.encode ops) (show source)
 
 foreign import setContentsImpl
-    :: forall eff
-     . Fn3
-        Editor  -- self
-        Foreign -- delta
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn3
+            Editor
+            Foreign -- delta
+            String  -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#settext
 setText
-    :: forall eff
-     . String
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => String
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-setText text source self =
-    handleReturn readOps <=< liftEff $
-        runFn3 setTextImpl
-            self
-            text
-            (show source)
+    -> m Ops
+setText text source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn3 setTextImpl
+        editor text (show source)
 
 foreign import setTextImpl
-    :: forall eff
-     . Fn3
-        Editor -- self
-        String -- text
-        String -- source
-        (Eff (quill :: QUILL | eff) Foreign)
+    :: UncurriedEffect.EffectFn3
+            Editor
+            String -- text
+            String -- source
+            Foreign
 
---------------------------------------------------------------------------------
+
 -- | https://quilljs.com/docs/api/#updatecontents
 updateContents
-    :: forall eff
-     . Ops
+    :: forall m
+     . MonadEffect m
+    => MonadError Foreign.MultipleErrors m
+    => Ops
     -> Source
     -> Editor
-    -> API (quill :: QUILL | eff) Ops
-updateContents ops source self =
-    handleReturn readOps <=< liftEff $
-        runFn3 updateContentsImpl
-            self
-            (opsToForeign ops)
-            (show source)
+    -> m Ops
+updateContents ops source editor =
+    either throwError pure <<< runExcept <<< Foreign.decode <=< liftEffect $
+    UncurriedEffect.runEffectFn3 updateContentsImpl
+        editor (Foreign.encode ops) (show source)
 
 foreign import updateContentsImpl
-    :: forall eff
-     . Fn3
-        Editor  -- self
-        Foreign -- delta
-        String  -- source
-        (Eff (quill :: QUILL | eff) Foreign)
-
---------------------------------------------------------------------------------
-
-type DefaultArg = Maybe
-
-foreign import undefined :: Foreign -- for optional arguments
-
+    :: UncurriedEffect.EffectFn3
+            Editor
+            Foreign -- delta
+            String  -- source
+            Foreign
